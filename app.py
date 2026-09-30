@@ -43,8 +43,15 @@ def _start_file_server() -> None:
 _server_thread = threading.Thread(target=_start_file_server, daemon=True)
 _server_thread.start()
 
-HTML_URL = f"http://localhost:{FILE_SERVER_PORT}/engine_explorer.html"
+from pathlib import Path
+import streamlit as st
 
+html_path = Path(__file__).parent / "engine_explorer.html"
+
+with open(html_path, "r", encoding="utf-8") as f:
+    html = f.read()
+
+st.components.v1.html(html, height=3000, scrolling=True)
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Streamlit page setup
 # ─────────────────────────────────────────────────────────────────────────────
