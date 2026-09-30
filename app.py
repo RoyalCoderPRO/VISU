@@ -33,8 +33,9 @@ class _SilentHandler(http.server.SimpleHTTPRequestHandler):
         pass  # suppress stdout noise
 
 def _start_file_server() -> None:
+    socketserver.TCPServer.allow_reuse_address = True
     try:
-        with socketserver.TCPServer(("127.0.0.1", FILE_SERVER_PORT), _SilentHandler) as httpd:
+        with socketserver.TCPServer(("0.0.0.0", FILE_SERVER_PORT), _SilentHandler) as httpd:
             httpd.serve_forever()
     except OSError:
         pass  # already running from a previous hot-reload
@@ -43,15 +44,8 @@ def _start_file_server() -> None:
 _server_thread = threading.Thread(target=_start_file_server, daemon=True)
 _server_thread.start()
 
-from pathlib import Path
-import streamlit as st
+HTML_URL = "app/static/engine_explorer.html"
 
-html_path = Path(__file__).parent / "engine_explorer.html"
-
-with open(html_path, "r", encoding="utf-8") as f:
-    html = f.read()
-
-st.components.v1.html(html, height=3000, scrolling=True)
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Streamlit page setup
 # ─────────────────────────────────────────────────────────────────────────────
@@ -335,10 +329,11 @@ def stats_section(df: pd.DataFrame) -> None:
 def main() -> None:
     # ── Section 1: HTML Explorer ─────────────────────────────────────────────
     st.markdown("### 🏎️ Automobile Engine & Body Explorer")
-    st.iframe(HTML_URL, height=3000, scrolling=True)
+    st.iframe(HTML_URL, height=3000)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
+
 
     # ── Section 2: Descriptive Stats ─────────────────────────────────────────
     df = load_data()
