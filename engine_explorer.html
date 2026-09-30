@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automobile Engine & Body Explorer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh}
+
+.header{text-align:center;padding:18px 20px 6px}
+.header h1{font-size:1.7rem;font-weight:700;background:linear-gradient(90deg,#38bdf8,#818cf8,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{color:#64748b;margin-top:3px;font-size:.85rem}
+
+/* ── Top selector bar ── */
+.selector-bar{background:#111827;border-bottom:1px solid #1e293b;padding:10px 24px;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.sel-group{display:flex;align-items:center;gap:8px}
+.sel-label{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:#475569;letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+
+/* Engine buttons */
+.eng-btn{padding:7px 14px;border:2px solid #1e293b;border-radius:7px;background:#0a0e1a;color:#64748b;font-family:'Share Tech Mono',monospace;font-weight:600;font-size:.8rem;cursor:pointer;transition:all .3s;text-transform:uppercase;letter-spacing:1px}
+.eng-btn:hover{border-color:#38bdf8;color:#38bdf8}
+.eng-btn.active{border-color:var(--bc);background:var(--bb);color:var(--bc);box-shadow:0 0 12px var(--bs)}
+
+/* ── Custom dropdown ── */
+.dropdown-wrap{position:relative}
+.dropdown-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border:2px solid #1e293b;border-radius:7px;
+  background:#0a0e1a;cursor:pointer;transition:all .3s;min-width:170px;
+  font-family:'Share Tech Mono',monospace;font-size:.8rem;
+}
+.dropdown-btn:hover{border-color:#64748b}
+.dropdown-btn.open{border-color:#64748b;border-bottom-color:transparent;border-radius:7px 7px 0 0}
+.dropdown-btn .dd-icon{width:36px;height:22px;flex-shrink:0}
+.dropdown-btn .dd-label{flex:1;color:#e2e8f0;letter-spacing:.5px}
+.dropdown-btn .dd-arrow{color:#475569;font-size:.6rem;transition:transform .2s}
+.dropdown-btn.open .dd-arrow{transform:rotate(180deg)}
+
+.dropdown-menu{
+  display:none;position:absolute;top:100%;left:0;right:0;z-index:99;
+  background:#111827;border:2px solid #64748b;border-top:none;border-radius:0 0 8px 8px;
+  overflow:hidden;
+}
+.dropdown-menu.open{display:block}
+.dd-option{
+  display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;
+  transition:background .2s;font-family:'Share Tech Mono',monospace;font-size:.75rem;
+}
+.dd-option:hover{background:#1e293b}
+.dd-option.selected{background:#1a2a3a}
+.dd-option .dd-icon{width:40px;height:24px;flex-shrink:0}
+.dd-option .dd-name{color:#e2e8f0;letter-spacing:.5px}
+.dd-option .dd-count{color:#475569;font-size:.65rem;margin-left:auto}
+.dd-option.sel-active .dd-name{color:var(--oc)}
+
+/* ── Main layout ── */
+.main{max-width:1200px;margin:0 auto;padding:16px;display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+
+/* ── Car panel (single image) ── */
+.car-panel{background:#0c1929;border-radius:12px;border:1px solid #1a2a4a;overflow:hidden;position:relative}
+.car-tag{display:block;text-align:center;background:#38bdf8;color:#0a0e1a;font-family:'Share Tech Mono',monospace;font-weight:700;padding:6px 0;font-size:.75rem;letter-spacing:2px;transition:background .4s}
+.body-badge{position:absolute;top:38px;right:8px;padding:3px 8px;border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:.6rem;font-weight:600;letter-spacing:1px;background:#1a2a4a;color:#475569;transition:all .3s;z-index:4}
+.car-img-wrap{position:relative}
+.car-img-wrap img{width:100%;display:block;min-height:200px;object-fit:cover;transition:opacity .4s}
+.eng-glow{position:absolute;width:100px;height:80px;border-radius:50%;pointer-events:none;z-index:3;background:radial-gradient(circle,var(--gc,#38bdf833) 0%,transparent 70%);animation:gp 2.5s ease-in-out infinite;transition:top .5s cubic-bezier(.4,0,.2,1),left .5s cubic-bezier(.4,0,.2,1),opacity .4s;opacity:0}
+.eng-glow.on{opacity:1}
+@keyframes gp{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+.eng-dia{position:absolute;width:105px;height:72px;z-index:4;pointer-events:none;transition:top .5s cubic-bezier(.4,0,.2,1),left .5s cubic-bezier(.4,0,.2,1),opacity .4s;opacity:0}
+.eng-dia.on{opacity:1}
+.eng-dia svg{width:100%;height:100%;filter:drop-shadow(0 0 10px var(--ec,#38bdf8))}
+.car-footer{padding:8px 12px 10px;font-family:'Share Tech Mono',monospace;font-size:.7rem;color:#3a6a9a;min-height:16px;text-align:center}
+.info-row{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.info-chip{padding:3px 8px;border-radius:4px;font-size:.65rem;background:#1a2a4a;color:#64748b;font-family:'Share Tech Mono',monospace}
+.lbl{color:#475569;font-size:.65rem;font-family:'Share Tech Mono',monospace;margin-right:3px}
+.loc-badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:.6rem;margin-left:5px;background:#1a2a4a;color:#64748b}
+
+/* ── Right column ── */
+.right-col{display:flex;flex-direction:column;gap:14px}
+.panel{background:#111827;border-radius:12px;padding:16px;border:1px solid #1e293b}
+.panel h3{font-size:.7rem;font-weight:600;margin-bottom:10px;color:#64748b;text-transform:uppercase;letter-spacing:1.5px}
+.bar-chart{display:flex;align-items:flex-end;justify-content:space-between;height:155px;gap:5px}
+.bar-group{display:flex;flex-direction:column;align-items:center;flex:1;cursor:pointer;transition:opacity .4s}
+.bar-group.dimmed{opacity:.4}
+.bar-group.dimmed:hover{opacity:.4}
+.bar{width:100%;border-radius:5px 5px 0 0;transition:all .5s cubic-bezier(.4,0,.2,1);min-height:3px}
+.bar-count{font-size:.7rem;font-weight:700;margin-bottom:4px;font-family:'Share Tech Mono',monospace}
+.bar-label{margin-top:6px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#475569;transition:color .4s}
+.bar-group.active .bar-label{color:#e2e8f0}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-card{background:#0a0e1a;border-radius:8px;padding:10px;text-align:center;border:1px solid #1e293b;transition:all .3s}
+.stat-card:hover{border-color:#334155;transform:translateY(-2px)}
+.stat-val{font-size:1.2rem;font-weight:700;color:#38bdf8;transition:color .4s;font-family:'Share Tech Mono',monospace}
+.stat-label{font-size:.65rem;color:#475569;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.makes-list{display:flex;flex-wrap:wrap;gap:5px}
+.make-tag{padding:4px 10px;border-radius:4px;font-size:.72rem;background:#0a0e1a;border:1px solid #1e293b;transition:all .3s;font-family:'Share Tech Mono',monospace}
+
+/* ── Drive-wheel selector ── */
+.dw-row{display:flex;gap:8px;padding:8px 12px 0;justify-content:center;flex-wrap:wrap}
+.dw-btn{padding:5px 14px;border:1.5px solid #1e293b;border-radius:6px;background:#0a0e1a;color:#475569;font-family:'Share Tech Mono',monospace;font-weight:600;font-size:.75rem;cursor:pointer;transition:all .3s;text-transform:uppercase;letter-spacing:1px}
+.dw-btn:hover{border-color:#64748b;color:#94a3b8}
+.dw-btn.active{border-color:var(--bc);background:var(--bb);color:var(--bc);box-shadow:0 0 10px var(--bs)}
+
+/* ── Wheel overlays ── */
+/* Each wheel div is absolutely positioned at a corner of the car image.
+   It holds two SVG rings that counter-rotate to create tyre-spin effect.  */
+.wheel-dot{
+  position:absolute;width:46px;height:46px;z-index:6;pointer-events:none;
+  transform:translate(-50%,-50%);
+  transition:opacity .45s;opacity:0;
+}
+.wheel-dot.lit{opacity:1}
+
+/* outer dashed ring – spins forward */
+@keyframes spin-fwd {from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+/* inner streak ring – spins backward */
+@keyframes spin-bwd {from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+/* glow pulse */
+@keyframes wglow{0%,100%{opacity:.5;r:18}50%{opacity:1;r:21}}
+
+.wr-outer{animation:spin-fwd .55s linear infinite;transform-origin:50% 50%}
+.wr-inner{animation:spin-bwd .4s  linear infinite;transform-origin:50% 50%}
+.wr-glow {animation:wglow 1.1s ease-in-out infinite}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏎️ Automobile Engine &amp; Body Explorer</h1>
+  <p>Select engine type &amp; body style to filter stats and see engine position</p>
+</div>
+
+<!-- ── SELECTOR BAR ── -->
+<div class="selector-bar">
+  <div class="sel-group">
+    <span class="sel-label">Engine</span>
+    <div id="engineBtns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
+  <div class="sel-group">
+    <span class="sel-label">Body</span>
+    <!-- Custom dropdown -->
+    <div class="dropdown-wrap" id="ddWrap">
+      <div class="dropdown-btn" id="ddBtn" onclick="toggleDD()">
+        <svg class="dd-icon" viewBox="0 0 40 24" fill="none" id="ddThumb"><!-- set by JS --></svg>
+        <span class="dd-label" id="ddLabel">ALL BODIES</span>
+        <span class="dd-arrow">▼</span>
+      </div>
+      <div class="dropdown-menu" id="ddMenu"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+  <!-- Single car view -->
+  <div class="car-panel">
+    <span class="car-tag" id="carTag">SELECT ENGINE</span>
+    <div class="body-badge" id="bodyBadge">ALL BODIES</div>
+    <div class="car-img-wrap" id="carBox">
+      <img id="carImg" src="car_blueprint.jpg" alt="Car blueprint"/>
+      <div class="eng-glow" id="engGlow"></div>
+      <div class="eng-dia"  id="engDia"></div>
+      <!-- Wheel spin overlays: % positions tuned to the blueprint image -->
+      <div class="wheel-dot" id="wFL" style="top:17%;left:16%"></div>
+      <div class="wheel-dot" id="wFR" style="top:17%;left:84%"></div>
+      <div class="wheel-dot" id="wRL" style="top:82%;left:16%"></div>
+      <div class="wheel-dot" id="wRR" style="top:82%;left:84%"></div>
+    </div>
+    <!-- Drive-wheel selector -->
+    <div class="dw-row" id="dwBtns"></div>
+    <div class="car-footer" id="carFooter"></div>
+    <div class="info-row" id="cylInfo"></div>
+    <div class="info-row" id="fsInfo" style="margin-top:4px;padding-bottom:8px"></div>
+  </div>
+
+  <!-- Right -->
+  <div class="right-col">
+    <div class="panel">
+      <h3 id="chartTitle">Cars by Engine Type</h3>
+      <div class="bar-chart" id="barChart"></div>
+    </div>
+    <div class="panel">
+      <h3>Statistics</h3>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val" id="sC">—</div><div class="stat-label">Cars</div></div>
+        <div class="stat-card"><div class="stat-val" id="sH">—</div><div class="stat-label">Avg HP</div></div>
+        <div class="stat-card"><div class="stat-val" id="sP">—</div><div class="stat-label">Avg Price</div></div>
+        <div class="stat-card"><div class="stat-val" id="sM">—</div><div class="stat-label">Avg MPG</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Brands</h3>
+      <div class="makes-list" id="makesList"><span style="color:#475569">Select above</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ────────────────────────────────────────────────────────────────
+const ENGINES=[
+  {t:"dohc",n:12,hp:146,pr:18116,mp:20,loc:"front",cy:["four","six"],fs:["mpfi"],ds:"Dual Overhead Cam — two camshafts per bank, high-rev power"},
+  {t:"l",   n:12,hp:96, pr:14628,mp:25,loc:"front",cy:["three","four"],fs:["2bbl","mpfi","idi"],ds:"L-Head (Flathead) — side-valve, simple & compact"},
+  {t:"ohc", n:145,hp:94,pr:11567,mp:27,loc:"front",cy:["four","five","six"],fs:["mpfi","2bbl","mfi","1bbl","spfi","idi","spdi"],ds:"Overhead Cam — most common, best efficiency/power balance"},
+  {t:"ohcf",n:15,hp:110,pr:13739,mp:25,loc:"rear", cy:["four","six"],fs:["mpfi","2bbl"],ds:"Flat/Boxer — horizontally opposed. Porsche mounts REAR!"},
+  {t:"ohcv",n:13,hp:170,pr:25098,mp:17,loc:"front",cy:["six","eight","twelve"],fs:["mpfi"],ds:"V-Type OHC — premium power for luxury & sport"},
+  {t:"rotor",n:4,hp:110,pr:13020,mp:17,loc:"front",cy:["two"],fs:["4bbl","mpfi"],ds:"Rotary (Wankel) — spinning triangular rotor, Mazda only"}
+];
+const BODIES=[
+  {b:"all",      img:"car_blueprint.jpg",    label:"All Bodies",  n:201,hp:103,pr:13207,mp:25.5,mk:[]},
+  {b:"convertible",img:"topdown_convertible.jpg",label:"Convertible",n:6,hp:131.7,pr:21890,mp:20.5,mk:["alfa-romero","mercedes-benz","porsche","toyota","volkswagen"],desc:"Open-top, 2-seat roadster"},
+  {b:"hardtop",  img:"topdown_hardtop.jpg",  label:"Hardtop",    n:8, hp:142.2,pr:22208,mp:21.6,mk:["mercedes-benz","nissan","porsche","toyota"],desc:"Fixed-roof, no B-pillar coupe"},
+  {b:"hatchback",img:"topdown_hatchback.jpg",label:"Hatchback",  n:68,hp:97.7, pr:9957, mp:26.6,mk:["alfa-romero","chevrolet","dodge","honda","isuzu","mazda","mercury","mitsubishi","nissan","plymouth","porsche","renault","saab","subaru","toyota","volkswagen"],desc:"Compact 2-box, sloped hatch"},
+  {b:"sedan",    img:"car_blueprint.jpg",    label:"Sedan",      n:94,hp:103.8,pr:14460,mp:25.1,mk:["audi","bmw","chevrolet","dodge","honda","isuzu","jaguar","mazda","mercedes-benz","mitsubishi","nissan","peugot","plymouth","saab","subaru","toyota","volkswagen","volvo"],desc:"Classic 3-box, separate trunk"},
+  {b:"wagon",    img:"topdown_wagon.jpg",    label:"Wagon",      n:25,hp:97.8, pr:12372,mp:24,  mk:["audi","dodge","honda","mercedes-benz","nissan","peugot","plymouth","renault","subaru","toyota","volkswagen","volvo"],desc:"Long roof, rear cargo estate"}
+];
+const COMB={
+  convertible:[{t:"dohc",n:2,hp:111,pr:14998,mp:21},{t:"l",n:0},{t:"ohc",n:2,hp:103,pr:14632,mp:24},{t:"ohcf",n:1,hp:207,pr:37028,mp:17},{t:"ohcv",n:1,hp:155,pr:35056,mp:16},{t:"rotor",n:0}],
+  hardtop:    [{t:"dohc",n:0},{t:"l",n:0},{t:"ohc",n:5,hp:108,pr:13142,mp:25},{t:"ohcf",n:2,hp:207,pr:33278,mp:17},{t:"ohcv",n:1,hp:184,pr:45400,mp:14},{t:"rotor",n:0}],
+  hatchback:  [{t:"dohc",n:4,hp:149,pr:15061,mp:21},{t:"l",n:1,hp:48,pr:5151,mp:47},{t:"ohc",n:52,hp:90,pr:9001,mp:28},{t:"ohcf",n:3,hp:72,pr:6591,mp:28},{t:"ohcv",n:4,hp:169,pr:17949,mp:19},{t:"rotor",n:4,hp:110,pr:13020,mp:17}],
+  sedan:      [{t:"dohc",n:5,hp:156,pr:22282,mp:19},{t:"l",n:7,hp:102,pr:15759,mp:23},{t:"ohc",n:71,hp:95,pr:13134,mp:26},{t:"ohcf",n:5,hp:90,pr:9071,mp:27},{t:"ohcv",n:6,hp:173,pr:26604,mp:16},{t:"rotor",n:0}],
+  wagon:      [{t:"dohc",n:1,hp:156,pr:15750,mp:19},{t:"l",n:4,hp:96,pr:15018,mp:22},{t:"ohc",n:15,hp:92,pr:12114,mp:25},{t:"ohcf",n:4,hp:92,pr:9342,mp:25},{t:"ohcv",n:1,hp:152,pr:14399,mp:17},{t:"rotor",n:0}]
+};
+const EC={dohc:{m:'#f472b6',b:'#f472b611',s:'#f472b633'},l:{m:'#a78bfa',b:'#a78bfa11',s:'#a78bfa33'},ohc:{m:'#38bdf8',b:'#38bdf811',s:'#38bdf833'},ohcf:{m:'#34d399',b:'#34d39911',s:'#34d39933'},ohcv:{m:'#fb923c',b:'#fb923c11',s:'#fb923c33'},rotor:{m:'#facc15',b:'#facc1511',s:'#facc1533'}};
+const BC={all:'#64748b',convertible:'#f472b6',hardtop:'#fb923c',hatchback:'#38bdf8',sedan:'#818cf8',wagon:'#34d399'};
+
+let selEngine=null, selBody='all';
+
+// ── Simple SVG silhouette icons for dropdown ─────────────────────────────
+// Top-down footprint outlines: just the body shape (very simple)
+const ICONS={
+  all:`<rect x="8" y="2" width="24" height="20" rx="3" stroke="#64748b" stroke-width="1.2" fill="none"/>
+       <rect x="11" y="6" width="18" height="12" rx="1" stroke="#64748b" stroke-width="0.7" fill="#64748b15"/>
+       <circle cx="10" cy="4" r="2" fill="#64748b44"/><circle cx="30" cy="4" r="2" fill="#64748b44"/>
+       <circle cx="10" cy="20" r="2" fill="#64748b44"/><circle cx="30" cy="20" r="2" fill="#64748b44"/>`,
+  // convertible: short & wide, open top (no roof rect fill)
+  convertible:`<path d="M12 2 Q20 1 28 2 L30 4 L30 20 L28 22 Q20 23 12 22 L10 20 L10 4 Z" stroke="var(--c)" stroke-width="1.2" fill="var(--c)12"/>
+               <circle cx="11" cy="4" r="2" fill="var(--c)55"/><circle cx="29" cy="4" r="2" fill="var(--c)55"/>
+               <circle cx="11" cy="20" r="2" fill="var(--c)55"/><circle cx="29" cy="20" r="2" fill="var(--c)55"/>
+               <line x1="20" y1="8" x2="20" y2="16" stroke="var(--c)" stroke-width="0.6" opacity="0.5"/>`,
+  // hardtop: wide at front, narrower at rear (coupe taper)
+  hardtop:`<path d="M10 3 Q20 1 30 3 L31 6 L31 18 L30 20 Q20 22 10 20 L9 18 L9 6 Z" stroke="var(--c)" stroke-width="1.2" fill="var(--c)12"/>
+           <circle cx="10" cy="5" r="2" fill="var(--c)55"/><circle cx="30" cy="5" r="2" fill="var(--c)55"/>
+           <circle cx="10" cy="19" r="2" fill="var(--c)55"/><circle cx="30" cy="19" r="2" fill="var(--c)55"/>
+           <rect x="14" y="7" width="12" height="10" rx="1" stroke="var(--c)" stroke-width="0.6" fill="var(--c)18"/>`,
+  // hatchback: compact square-ish shape
+  hatchback:`<path d="M11 2 Q20 1 29 2 L30 5 L30 21 L29 22 Q20 23 11 22 L10 21 L10 5 Z" stroke="var(--c)" stroke-width="1.2" fill="var(--c)12"/>
+             <circle cx="11" cy="4" r="2" fill="var(--c)55"/><circle cx="29" cy="4" r="2" fill="var(--c)55"/>
+             <circle cx="11" cy="20" r="2" fill="var(--c)55"/><circle cx="29" cy="20" r="2" fill="var(--c)55"/>
+             <rect x="13" y="7" width="14" height="10" rx="1" stroke="var(--c)" stroke-width="0.6" fill="var(--c)18"/>`,
+  // sedan: classic with pinched waist
+  sedan:`<path d="M10 3 Q20 2 30 3 L31 5 Q31 8 29 9 L29 15 Q31 16 31 19 L30 21 Q20 22 10 21 L9 19 Q9 16 11 15 L11 9 Q9 8 9 5 Z" stroke="var(--c)" stroke-width="1.2" fill="var(--c)12"/>
+         <circle cx="10" cy="4" r="2" fill="var(--c)55"/><circle cx="30" cy="4" r="2" fill="var(--c)55"/>
+         <circle cx="10" cy="20" r="2" fill="var(--c)55"/><circle cx="30" cy="20" r="2" fill="var(--c)55"/>`,
+  // wagon: long rectangle
+  wagon:`<path d="M10 3 Q20 2 30 3 L31 5 L31 21 L30 23 Q20 24 10 23 L9 21 L9 5 Z" stroke="var(--c)" stroke-width="1.2" fill="var(--c)12"/>
+         <circle cx="10" cy="4" r="2" fill="var(--c)55"/><circle cx="30" cy="4" r="2" fill="var(--c)55"/>
+         <circle cx="10" cy="22" r="2" fill="var(--c)55"/><circle cx="30" cy="22" r="2" fill="var(--c)55"/>
+         <line x1="9" y1="15" x2="31" y2="15" stroke="var(--c)" stroke-width="0.6" opacity="0.5"/>
+         <rect x="13" y="16" width="14" height="5" rx="1" stroke="var(--c)" stroke-width="0.5" fill="var(--c)20"/>`
+};
+
+function iconSVG(b,c='#64748b',vb='0 0 40 25'){
+  return `<svg viewBox="${vb}" fill="none" xmlns="http://www.w3.org/2000/svg" style="--c:${c}">${ICONS[b]||ICONS.all}</svg>`;
+}
+
+// ── Engine SVG diagrams ─────────────────────────────────────────────────
+function eSVG(t,c){const s={
+dohc:`<svg viewBox="0 0 130 72" fill="none"><rect x="4" y="6" width="122" height="52" rx="7" stroke="${c}" stroke-width="1.8" fill="${c}12"/><rect x="4" y="6" width="122" height="7" rx="4" fill="${c}20"/><rect x="4" y="45" width="122" height="13" rx="4" fill="${c}18"/><rect x="10" y="12" width="110" height="10" rx="3" stroke="${c}" stroke-width="1" fill="${c}22"/><circle cx="18" cy="17" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="43" cy="17" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="68" cy="17" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="93" cy="17" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="118" cy="17" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><rect x="10" y="36" width="110" height="10" rx="3" stroke="${c}" stroke-width="1" fill="${c}22"/><circle cx="18" cy="41" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="43" cy="41" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="68" cy="41" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="93" cy="41" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="118" cy="41" r="4" stroke="${c}" stroke-width="1" fill="${c}33"/><circle cx="30" cy="29" r="5" stroke="${c}" stroke-width="1.2" fill="${c}0a"/><circle cx="30" cy="29" r="2" stroke="${c}" stroke-width="0.8" fill="${c}44"/><circle cx="55" cy="29" r="5" stroke="${c}" stroke-width="1.2" fill="${c}0a"/><circle cx="55" cy="29" r="2" stroke="${c}" stroke-width="0.8" fill="${c}44"/><circle cx="80" cy="29" r="5" stroke="${c}" stroke-width="1.2" fill="${c}0a"/><circle cx="80" cy="29" r="2" stroke="${c}" stroke-width="0.8" fill="${c}44"/><circle cx="105" cy="29" r="5" stroke="${c}" stroke-width="1.2" fill="${c}0a"/><circle cx="105" cy="29" r="2" stroke="${c}" stroke-width="0.8" fill="${c}44"/><circle cx="10" cy="29" r="4.5" stroke="${c}" stroke-width="1.2" fill="${c}30"/><text x="65" y="68" text-anchor="middle" fill="${c}" font-size="7.5" font-weight="700" font-family="Share Tech Mono">DOHC — INLINE 4</text></svg>`,
+l:`<svg viewBox="0 0 130 72" fill="none"><rect x="4" y="6" width="122" height="52" rx="6" stroke="${c}" stroke-width="1.8" fill="${c}10"/><rect x="10" y="10" width="110" height="22" rx="4" stroke="${c}" stroke-width="1" fill="${c}18"/><circle cx="30" cy="21" r="8" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="30" cy="21" r="4" stroke="${c}" stroke-width="0.8" fill="${c}0a"/><circle cx="55" cy="21" r="8" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="55" cy="21" r="4" stroke="${c}" stroke-width="0.8" fill="${c}0a"/><circle cx="80" cy="21" r="8" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="80" cy="21" r="4" stroke="${c}" stroke-width="0.8" fill="${c}0a"/><circle cx="105" cy="21" r="8" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="105" cy="21" r="4" stroke="${c}" stroke-width="0.8" fill="${c}0a"/><rect x="10" y="35" width="110" height="18" rx="4" stroke="${c}" stroke-width="1.2" fill="${c}20"/><ellipse cx="26" cy="44" rx="4" ry="5" stroke="${c}" stroke-width="0.8" fill="${c}30"/><ellipse cx="34" cy="44" rx="4" ry="5" stroke="${c}" stroke-width="0.8" fill="${c}30"/><ellipse cx="51" cy="44" rx="4" ry="5" stroke="${c}" stroke-width="0.8" fill="${c}30"/><ellipse cx="59" cy="44" rx="4" ry="5" stroke="${c}" stroke-width="0.8" fill="${c}30"/><ellipse cx="76" cy="44" rx="4" ry="5" stroke="${c}" stroke-width="0.8" fill="${c}30"/><ellipse cx="84" cy="44" rx="4" ry="5" stroke="${c}" stroke-width="0.8" fill="${c}30"/><ellipse cx="101" cy="44" rx="4" ry="5" stroke="${c}" stroke-width="0.8" fill="${c}30"/><ellipse cx="109" cy="44" rx="4" ry="5" stroke="${c}" stroke-width="0.8" fill="${c}30"/><text x="65" y="68" text-anchor="middle" fill="${c}" font-size="7.5" font-weight="700" font-family="Share Tech Mono">L-HEAD / FLATHEAD</text></svg>`,
+ohc:`<svg viewBox="0 0 130 72" fill="none"><rect x="4" y="6" width="122" height="52" rx="7" stroke="${c}" stroke-width="1.8" fill="${c}12"/><line x1="30" y1="6" x2="30" y2="12" stroke="${c}" stroke-width="3" stroke-linecap="round" opacity="0.4"/><line x1="55" y1="6" x2="55" y2="12" stroke="${c}" stroke-width="3" stroke-linecap="round" opacity="0.4"/><line x1="80" y1="6" x2="80" y2="12" stroke="${c}" stroke-width="3" stroke-linecap="round" opacity="0.4"/><line x1="105" y1="6" x2="105" y2="12" stroke="${c}" stroke-width="3" stroke-linecap="round" opacity="0.4"/><rect x="10" y="12" width="110" height="11" rx="3" stroke="${c}" stroke-width="1" fill="${c}22"/><circle cx="18" cy="17.5" r="4.5" stroke="${c}" stroke-width="1" fill="${c}35"/><circle cx="43" cy="17.5" r="4.5" stroke="${c}" stroke-width="1" fill="${c}35"/><circle cx="68" cy="17.5" r="4.5" stroke="${c}" stroke-width="1" fill="${c}35"/><circle cx="93" cy="17.5" r="4.5" stroke="${c}" stroke-width="1" fill="${c}35"/><circle cx="118" cy="17.5" r="4.5" stroke="${c}" stroke-width="1" fill="${c}35"/><rect x="22" y="26" width="16" height="6" rx="2" stroke="${c}" stroke-width="0.7" fill="${c}18"/><rect x="47" y="26" width="16" height="6" rx="2" stroke="${c}" stroke-width="0.7" fill="${c}18"/><rect x="72" y="26" width="16" height="6" rx="2" stroke="${c}" stroke-width="0.7" fill="${c}18"/><rect x="97" y="26" width="16" height="6" rx="2" stroke="${c}" stroke-width="0.7" fill="${c}18"/><circle cx="30" cy="38" r="5" stroke="${c}" stroke-width="1.2" fill="${c}0a"/><circle cx="30" cy="38" r="2" stroke="${c}" stroke-width="0.8" fill="${c}44"/><circle cx="55" cy="38" r="5" stroke="${c}" stroke-width="1.2" fill="${c}0a"/><circle cx="55" cy="38" r="2" stroke="${c}" stroke-width="0.8" fill="${c}44"/><circle cx="80" cy="38" r="5" stroke="${c}" stroke-width="1.2" fill="${c}0a"/><circle cx="80" cy="38" r="2" stroke="${c}" stroke-width="0.8" fill="${c}44"/><circle cx="105" cy="38" r="5" stroke="${c}" stroke-width="1.2" fill="${c}0a"/><circle cx="105" cy="38" r="2" stroke="${c}" stroke-width="0.8" fill="${c}44"/><rect x="22" y="47" width="14" height="6" rx="2" stroke="${c}" stroke-width="0.7" fill="${c}15" opacity="0.7"/><rect x="47" y="47" width="14" height="6" rx="2" stroke="${c}" stroke-width="0.7" fill="${c}15" opacity="0.7"/><rect x="72" y="47" width="14" height="6" rx="2" stroke="${c}" stroke-width="0.7" fill="${c}15" opacity="0.7"/><rect x="97" y="47" width="14" height="6" rx="2" stroke="${c}" stroke-width="0.7" fill="${c}15" opacity="0.7"/><text x="65" y="68" text-anchor="middle" fill="${c}" font-size="7.5" font-weight="700" font-family="Share Tech Mono">OHC — INLINE 4</text></svg>`,
+ohcf:`<svg viewBox="0 0 130 72" fill="none"><rect x="44" y="16" width="42" height="38" rx="5" stroke="${c}" stroke-width="1.8" fill="${c}22"/><circle cx="65" cy="35" r="7" stroke="${c}" stroke-width="1.2" fill="${c}35"/><circle cx="65" cy="35" r="3" stroke="${c}" stroke-width="0.8" fill="${c}55"/><rect x="6" y="11" width="38" height="14" rx="4" stroke="${c}" stroke-width="1.3" fill="${c}18"/><rect x="6" y="45" width="38" height="14" rx="4" stroke="${c}" stroke-width="1.3" fill="${c}18"/><circle cx="16" cy="18" r="5" stroke="${c}" stroke-width="1" fill="${c}28"/><circle cx="16" cy="18" r="2" fill="${c}44"/><circle cx="33" cy="18" r="5" stroke="${c}" stroke-width="1" fill="${c}28"/><circle cx="33" cy="18" r="2" fill="${c}44"/><circle cx="16" cy="52" r="5" stroke="${c}" stroke-width="1" fill="${c}28"/><circle cx="16" cy="52" r="2" fill="${c}44"/><circle cx="33" cy="52" r="5" stroke="${c}" stroke-width="1" fill="${c}28"/><circle cx="33" cy="52" r="2" fill="${c}44"/><line x1="38" y1="18" x2="44" y2="30" stroke="${c}" stroke-width="0.8" opacity="0.5"/><line x1="38" y1="52" x2="44" y2="40" stroke="${c}" stroke-width="0.8" opacity="0.5"/><rect x="86" y="11" width="38" height="14" rx="4" stroke="${c}" stroke-width="1.3" fill="${c}18"/><rect x="86" y="45" width="38" height="14" rx="4" stroke="${c}" stroke-width="1.3" fill="${c}18"/><circle cx="97" cy="18" r="5" stroke="${c}" stroke-width="1" fill="${c}28"/><circle cx="97" cy="18" r="2" fill="${c}44"/><circle cx="114" cy="18" r="5" stroke="${c}" stroke-width="1" fill="${c}28"/><circle cx="114" cy="18" r="2" fill="${c}44"/><circle cx="97" cy="52" r="5" stroke="${c}" stroke-width="1" fill="${c}28"/><circle cx="97" cy="52" r="2" fill="${c}44"/><circle cx="114" cy="52" r="5" stroke="${c}" stroke-width="1" fill="${c}28"/><circle cx="114" cy="52" r="2" fill="${c}44"/><line x1="86" y1="18" x2="80" y2="30" stroke="${c}" stroke-width="0.8" opacity="0.5"/><line x1="86" y1="52" x2="80" y2="40" stroke="${c}" stroke-width="0.8" opacity="0.5"/><text x="38" y="37" text-anchor="middle" fill="${c}" font-size="9" opacity="0.5">◄</text><text x="92" y="37" text-anchor="middle" fill="${c}" font-size="9" opacity="0.5">►</text><text x="65" y="70" text-anchor="middle" fill="${c}" font-size="7.5" font-weight="700" font-family="Share Tech Mono">FLAT-4 BOXER</text></svg>`,
+ohcv:`<svg viewBox="0 0 130 72" fill="none"><rect x="4" y="4" width="52" height="18" rx="5" stroke="${c}" stroke-width="1.5" fill="${c}18" transform="rotate(22 30 13)"/><circle cx="18" cy="10" r="5.5" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="18" cy="10" r="2" fill="${c}44"/><circle cx="35" cy="16" r="5.5" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="35" cy="16" r="2" fill="${c}44"/><circle cx="52" cy="22" r="5.5" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="52" cy="22" r="2" fill="${c}44"/><rect x="74" y="4" width="52" height="18" rx="5" stroke="${c}" stroke-width="1.5" fill="${c}18" transform="rotate(-22 100 13)"/><circle cx="112" cy="10" r="5.5" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="112" cy="10" r="2" fill="${c}44"/><circle cx="95" cy="16" r="5.5" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="95" cy="16" r="2" fill="${c}44"/><circle cx="78" cy="22" r="5.5" stroke="${c}" stroke-width="1.2" fill="${c}25"/><circle cx="78" cy="22" r="2" fill="${c}44"/><path d="M52 22 Q65 28 78 22 L78 46 Q65 54 52 46 Z" stroke="${c}" stroke-width="1.2" fill="${c}15"/><ellipse cx="65" cy="38" rx="10" ry="8" stroke="${c}" stroke-width="1" fill="${c}28" stroke-dasharray="2 2"/><circle cx="65" cy="38" r="3" stroke="${c}" stroke-width="0.8" fill="${c}44"/><rect x="58" y="46" width="14" height="10" rx="3" stroke="${c}" stroke-width="1" fill="${c}30"/><text x="65" y="68" text-anchor="middle" fill="${c}" font-size="7.5" font-weight="700" font-family="Share Tech Mono">V-TYPE OHC (V6)</text></svg>`,
+rotor:`<svg viewBox="0 0 130 72" fill="none"><path d="M65 6 C92 6,112 18,112 36 C112 54,92 66,65 66 C38 66,18 54,18 36 C18 18,38 6,65 6 Z" stroke="${c}" stroke-width="1.8" fill="${c}10"/><path d="M65 12 C88 12,106 22,106 36 C106 50,88 60,65 60 C42 60,24 50,24 36 C24 22,42 12,65 12 Z" stroke="${c}" stroke-width="0.8" fill="none" stroke-dasharray="3 2" opacity="0.35"/><g><path d="M65 16 Q84 30 80 50 Q65 58 50 50 Q46 30 65 16 Z" stroke="${c}" stroke-width="1.5" fill="${c}25" stroke-linejoin="round"><animateTransform attributeName="transform" type="rotate" from="0 65 36" to="360 65 36" dur="4s" repeatCount="indefinite"/></path><circle cx="65" cy="16" r="2.5" fill="${c}99"><animateTransform attributeName="transform" type="rotate" from="0 65 36" to="360 65 36" dur="4s" repeatCount="indefinite"/></circle><circle cx="80" cy="50" r="2.5" fill="${c}99"><animateTransform attributeName="transform" type="rotate" from="0 65 36" to="360 65 36" dur="4s" repeatCount="indefinite"/></circle><circle cx="50" cy="50" r="2.5" fill="${c}99"><animateTransform attributeName="transform" type="rotate" from="0 65 36" to="360 65 36" dur="4s" repeatCount="indefinite"/></circle></g><circle cx="65" cy="36" r="6.5" stroke="${c}" stroke-width="1.2" fill="${c}40"/><circle cx="65" cy="36" r="2.5" stroke="${c}" stroke-width="0.8" fill="${c}66"/><rect x="12" y="31" width="5" height="10" rx="2" stroke="${c}" stroke-width="1" fill="${c}30"/><text x="10" y="28" fill="${c}" font-size="5" font-family="Share Tech Mono" text-anchor="middle" opacity="0.8">IN</text><rect x="113" y="31" width="5" height="10" rx="2" stroke="${c}" stroke-width="1" fill="${c}30"/><text x="120" y="28" fill="${c}" font-size="5" font-family="Share Tech Mono" text-anchor="middle" opacity="0.8">EX</text><text x="65" y="70" text-anchor="middle" fill="${c}" font-size="7.5" font-weight="700" font-family="Share Tech Mono">WANKEL ROTARY</text></svg>`
+};return s[t]||s.ohc;}
+
+// ── Dropdown ─────────────────────────────────────────────────────────────
+function buildDD(){
+  const menu=document.getElementById('ddMenu');
+  BODIES.forEach(bd=>{
+    const c=BC[bd.b];
+    const row=document.createElement('div');
+    row.className='dd-option'+(bd.b===selBody?' selected':'');
+    row.dataset.b=bd.b;
+    row.style.setProperty('--oc',c);
+    row.innerHTML=`<svg class="dd-icon" viewBox="0 0 40 25" fill="none" style="--c:${c}">${ICONS[bd.b]||ICONS.all}</svg>
+      <span class="dd-name ${bd.b===selBody?'sel-active':''}">${bd.label.toUpperCase()}</span>
+      <span class="dd-count">${bd.n} cars</span>`;
+    row.addEventListener('click',()=>{selBody=bd.b;closeDD();render();});
+    menu.appendChild(row);
+  });
+  updateDDBtn();
+}
+function updateDDBtn(){
+  const bd=BODIES.find(b=>b.b===selBody)||BODIES[0];
+  const c=BC[bd.b];
+  document.getElementById('ddThumb').innerHTML=`<svg viewBox="0 0 40 25" fill="none" style="--c:${c}">${ICONS[bd.b]||ICONS.all}</svg>`;
+  document.getElementById('ddLabel').textContent=bd.label.toUpperCase();
+  document.getElementById('ddBtn').style.borderColor=selBody==='all'?'#1e293b':c;
+  // refresh options
+  document.querySelectorAll('.dd-option').forEach(o=>{
+    o.classList.toggle('selected',o.dataset.b===selBody);
+    o.querySelector('.dd-name').classList.toggle('sel-active',o.dataset.b===selBody);
+  });
+}
+function toggleDD(){
+  const btn=document.getElementById('ddBtn'),menu=document.getElementById('ddMenu');
+  btn.classList.toggle('open');menu.classList.toggle('open');
+}
+function closeDD(){
+  document.getElementById('ddBtn').classList.remove('open');
+  document.getElementById('ddMenu').classList.remove('open');
+}
+document.addEventListener('click',e=>{if(!document.getElementById('ddWrap').contains(e.target))closeDD();});
+
+// ── Init engine buttons + bars ────────────────────────────────────────────
+function init(){
+  const ew=document.getElementById('engineBtns');
+  ENGINES.forEach(e=>{
+    const b=document.createElement('button');b.className='eng-btn';b.textContent=e.t.toUpperCase();
+    b.style.setProperty('--bc',EC[e.t].m);b.style.setProperty('--bb',EC[e.t].b);b.style.setProperty('--bs',EC[e.t].s);
+    b.addEventListener('click',()=>{selEngine=selEngine===e.t?null:e.t;render();});
+    ew.appendChild(b);
+  });
+  const cw=document.getElementById('barChart');
+  ENGINES.forEach(e=>{
+    const g=document.createElement('div');g.className='bar-group';g.dataset.t=e.t;g.addEventListener('click',()=>{selEngine=selEngine===e.t?null:e.t;render();});
+    const cn=document.createElement('div');cn.className='bar-count';cn.id='bc_'+e.t;cn.style.color=EC[e.t].m;
+    const br=document.createElement('div');br.className='bar';br.id='bb_'+e.t;br.style.background=`linear-gradient(to top,${EC[e.t].m}cc,${EC[e.t].m}44)`;
+    const lb=document.createElement('div');lb.className='bar-label';lb.textContent=e.t.toUpperCase();
+    g.append(cn,br,lb);cw.appendChild(g);
+  });
+  buildDD();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render(){
+  const eng=selEngine?ENGINES.find(e=>e.t===selEngine):null;
+  const bod=BODIES.find(b=>b.b===selBody)||BODIES[0];
+  const activeColor=eng?EC[eng.t].m:BC[selBody];
+
+  // Button states
+  document.querySelectorAll('.eng-btn').forEach(b=>b.classList.toggle('active',b.textContent===selEngine?.toUpperCase()));
+  updateDDBtn();
+
+  // ── Car image (single) ──
+  document.getElementById('carImg').src=bod.img;
+  const tag=document.getElementById('carTag');
+  const badge=document.getElementById('bodyBadge');
+  if(eng){tag.textContent=eng.t.toUpperCase()+' ENGINE';tag.style.background=EC[eng.t].m;}
+  else{tag.textContent=selBody==='all'?'SELECT ENGINE':bod.label.toUpperCase();tag.style.background=selBody==='all'?'#38bdf8':BC[selBody];}
+  if(selBody!=='all'){
+    badge.textContent=bod.label.toUpperCase();badge.style.color=BC[selBody];badge.style.background=BC[selBody]+'22';badge.style.border='1px solid '+BC[selBody]+'44';
+  } else {
+    badge.textContent='ALL BODIES';badge.style.color='#475569';badge.style.background='#1a2a4a';badge.style.border='none';
+  }
+
+  // ── Engine overlay ──
+  const gl=document.getElementById('engGlow'),di=document.getElementById('engDia');
+  if(eng){
+    gl.style.setProperty('--gc',EC[eng.t].m+'55');di.style.setProperty('--ec',EC[eng.t].m);
+    const isR=eng.loc==='rear';
+    if(isR){gl.style.top='68%';gl.style.left='calc(50% - 52px)';di.style.top='70%';di.style.left='calc(50% - 52px)';}
+    else{gl.style.top='2%';gl.style.left='calc(50% - 52px)';di.style.top='3%';di.style.left='calc(50% - 52px)';}
+    gl.classList.add('on');di.classList.add('on');di.innerHTML=eSVG(eng.t,EC[eng.t].m);
+    const lb=isR?`<span style="color:${EC[eng.t].m};font-size:.6rem;font-family:Share Tech Mono;padding:2px 6px;background:${EC[eng.t].m}22;border-radius:3px;margin-left:5px">⚠ REAR</span>`:'';
+    document.getElementById('carFooter').innerHTML=eng.ds+lb;
+    document.getElementById('cylInfo').innerHTML='<span class="lbl">CYL:</span>'+eng.cy.map(x=>`<span class="info-chip">${x}</span>`).join('');
+    document.getElementById('fsInfo').innerHTML='<span class="lbl">FUEL:</span>'+eng.fs.map(x=>`<span class="info-chip">${x}</span>`).join('');
+  } else {
+    gl.classList.remove('on');di.classList.remove('on');
+    document.getElementById('carFooter').innerHTML=selBody!=='all'?bod.desc:'';
+    document.getElementById('cylInfo').innerHTML='';document.getElementById('fsInfo').innerHTML='';
+  }
+
+  // ── Bar chart ──
+  const bodData=selBody!=='all'?COMB[selBody]:null;
+  const maxN=bodData?Math.max(...bodData.map(d=>d.n),1):Math.max(...ENGINES.map(e=>e.n));
+  document.getElementById('chartTitle').textContent=selBody!=='all'?`Engine Mix — ${bod.label}`:'Cars by Engine Type';
+  ENGINES.forEach(e=>{
+    const n=bodData?(bodData.find(d=>d.t===e.t)?.n??0):e.n;
+    document.getElementById('bc_'+e.t).textContent=n;
+    const bar=document.getElementById('bb_'+e.t);
+    bar.style.height=`${Math.max((n/maxN)*135,n>0?4:2)}px`;
+    bar.style.opacity=n===0?'0.15':'1';
+    const g=bar.closest('.bar-group');
+    g.classList.toggle('dimmed',!!(selEngine&&selEngine!==e.t));
+    g.classList.toggle('active',selEngine===e.t);
+  });
+
+  // ── Stats ──
+  let statsN=null,statsHP=null,statsPR=null,statsMP=null,makes=[];
+  if(eng&&selBody!=='all'){
+    const row=COMB[selBody]?.find(d=>d.t===eng.t);
+    if(row?.n>0){statsN=row.n;statsHP=row.hp;statsPR=row.pr;statsMP=row.mp;}
+    makes=bod.mk;
+  } else if(eng){
+    statsN=eng.n;statsHP=eng.hp;statsPR=eng.pr;statsMP=eng.mp;
+    makes=BODIES.filter(b=>b.b!=='all').flatMap(b=>COMB[b.b]?.find(d=>d.t===eng.t)?.n>0?b.mk:[]).filter((v,i,a)=>a.indexOf(v)===i);
+  } else if(selBody!=='all'){
+    statsN=bod.n;statsHP=bod.hp;statsPR=bod.pr;statsMP=bod.mp;
+    makes=bod.mk;
+  }
+  document.querySelectorAll('.stat-val').forEach(e=>e.style.color=activeColor);
+  if(statsN!==null){aV('sC',statsN,'',false);aV('sH',statsHP,' hp',false);aV('sP',statsPR,'',true);aV('sM',statsMP,' mpg',false);}
+  else['sC','sH','sP','sM'].forEach(id=>document.getElementById(id).textContent='—');
+
+  const ml=document.getElementById('makesList');
+  if(makes.length)ml.innerHTML=makes.sort().map(m=>`<span class="make-tag" style="border-color:${activeColor}44;color:${activeColor}">${m}</span>`).join('');
+  else ml.innerHTML='<span style="color:#475569">'+(eng||selBody!=='all'?'No data for this combination':'Select above')+'</span>';
+}
+
+function aV(id,tgt,sfx,ip){
+  if(!tgt){document.getElementById(id).textContent='—';return;}
+  const e=document.getElementById(id),dur=450,s=performance.now();
+  function u(n){const p=Math.min((n-s)/dur,1),v=Math.round(tgt*(1-Math.pow(1-p,3)));
+  e.textContent=(ip?'$':'')+v.toLocaleString()+sfx;if(p<1)requestAnimationFrame(u);}
+  requestAnimationFrame(u);
+}
+
+init();
+render();
+</script>
+
+
+
+
+<!-- ##STATS_SECTION_START## -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<div style="max-width:1200px;margin:28px auto 0;padding:0 16px 32px">
+  <div style="border-top:1px solid #1e293b;padding-top:22px">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:20px">
+      <h2 style="font-size:1.5rem;font-weight:700;background:linear-gradient(90deg,#38bdf8,#818cf8,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0 0 4px">
+        📊 Descriptive Statistics
+      </h2>
+      <p style="color:#475569;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:2px;margin:0">
+        1985 WARD'S AUTOMOTIVE YEARBOOK · 205 RECORDS
+      </p>
+    </div>
+
+    <!-- Filters -->
+    <div id="statsFilters" style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:18px"></div>
+
+    <!-- Record count -->
+    <p id="statsCount" style="text-align:center;font-family:'Share Tech Mono',monospace;font-size:.68rem;color:#475569;margin-bottom:14px"></p>
+
+    <!-- KPI cards -->
+    <div id="kpiRow" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px"></div>
+
+    <!-- Row 1: 4 histograms -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Price Distribution</div>
+        <div style="position:relative;height:170px;width:100%">
+          <canvas id="cHist0"></canvas>
+        </div>
+      </div>
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Horsepower Distribution</div>
+        <div style="position:relative;height:170px;width:100%">
+          <canvas id="cHist1"></canvas>
+        </div>
+      </div>
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Avg MPG Distribution</div>
+        <div style="position:relative;height:170px;width:100%">
+          <canvas id="cHist2"></canvas>
+        </div>
+      </div>
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Engine Size Distribution</div>
+        <div style="position:relative;height:170px;width:100%">
+          <canvas id="cHist3"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: body price + engine hp/mpg -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Avg Price by Body Style</div>
+        <div style="position:relative;height:200px;width:100%">
+          <canvas id="cBodyPrice"></canvas>
+        </div>
+      </div>
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Avg HP &amp; MPG by Engine Type</div>
+        <div style="position:relative;height:200px;width:100%">
+          <canvas id="cEngHpMpg"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: scatter + correlation -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Price vs Horsepower</div>
+        <div style="position:relative;height:220px;width:100%">
+          <canvas id="cScatter"></canvas>
+        </div>
+      </div>
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Feature Correlation with Price</div>
+        <div style="position:relative;height:220px;width:100%">
+          <canvas id="cCorr"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: makes + drive-wheel -->
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin-bottom:14px">
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Cars by Make (Top 15)</div>
+        <div style="position:relative;height:280px;width:100%">
+          <canvas id="cMakes"></canvas>
+        </div>
+      </div>
+      
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:12px;box-sizing:border-box">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:#64748b;letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Drive-Wheel Distribution</div>
+        <div style="position:relative;height:280px;width:100%">
+          <canvas id="cDW"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+// ── Data ──────────────────────────────────────────────────────────────────────
+const RAW = [{"symboling":3,"normalized-losses":null,"make":"alfa-romero","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"convertible","drive-wheels":"rwd","engine-location":"front","wheel-base":88.6,"length":168.8,"width":64.1,"height":48.8,"curb-weight":2548,"engine-type":"dohc","num-of-cylinders":"four","engine-size":130,"fuel-system":"mpfi","bore":3.47,"stroke":2.68,"compression-ratio":9.0,"horsepower":111.0,"peak-rpm":5000.0,"city-mpg":21,"highway-mpg":27,"price":13495.0,"avg-mpg":24.0},{"symboling":3,"normalized-losses":null,"make":"alfa-romero","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"convertible","drive-wheels":"rwd","engine-location":"front","wheel-base":88.6,"length":168.8,"width":64.1,"height":48.8,"curb-weight":2548,"engine-type":"dohc","num-of-cylinders":"four","engine-size":130,"fuel-system":"mpfi","bore":3.47,"stroke":2.68,"compression-ratio":9.0,"horsepower":111.0,"peak-rpm":5000.0,"city-mpg":21,"highway-mpg":27,"price":16500.0,"avg-mpg":24.0},{"symboling":1,"normalized-losses":null,"make":"alfa-romero","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":94.5,"length":171.2,"width":65.5,"height":52.4,"curb-weight":2823,"engine-type":"ohcv","num-of-cylinders":"six","engine-size":152,"fuel-system":"mpfi","bore":2.68,"stroke":3.47,"compression-ratio":9.0,"horsepower":154.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":26,"price":16500.0,"avg-mpg":22.5},{"symboling":2,"normalized-losses":164.0,"make":"audi","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":99.8,"length":176.6,"width":66.2,"height":54.3,"curb-weight":2337,"engine-type":"ohc","num-of-cylinders":"four","engine-size":109,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":10.0,"horsepower":102.0,"peak-rpm":5500.0,"city-mpg":24,"highway-mpg":30,"price":13950.0,"avg-mpg":27.0},{"symboling":2,"normalized-losses":164.0,"make":"audi","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"4wd","engine-location":"front","wheel-base":99.4,"length":176.6,"width":66.4,"height":54.3,"curb-weight":2824,"engine-type":"ohc","num-of-cylinders":"five","engine-size":136,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":8.0,"horsepower":115.0,"peak-rpm":5500.0,"city-mpg":18,"highway-mpg":22,"price":17450.0,"avg-mpg":20.0},{"symboling":2,"normalized-losses":null,"make":"audi","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":99.8,"length":177.3,"width":66.3,"height":53.1,"curb-weight":2507,"engine-type":"ohc","num-of-cylinders":"five","engine-size":136,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":8.5,"horsepower":110.0,"peak-rpm":5500.0,"city-mpg":19,"highway-mpg":25,"price":15250.0,"avg-mpg":22.0},{"symboling":1,"normalized-losses":158.0,"make":"audi","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":105.8,"length":192.7,"width":71.4,"height":55.7,"curb-weight":2844,"engine-type":"ohc","num-of-cylinders":"five","engine-size":136,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":8.5,"horsepower":110.0,"peak-rpm":5500.0,"city-mpg":19,"highway-mpg":25,"price":17710.0,"avg-mpg":22.0},{"symboling":1,"normalized-losses":null,"make":"audi","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":105.8,"length":192.7,"width":71.4,"height":55.7,"curb-weight":2954,"engine-type":"ohc","num-of-cylinders":"five","engine-size":136,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":8.5,"horsepower":110.0,"peak-rpm":5500.0,"city-mpg":19,"highway-mpg":25,"price":18920.0,"avg-mpg":22.0},{"symboling":1,"normalized-losses":158.0,"make":"audi","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":105.8,"length":192.7,"width":71.4,"height":55.9,"curb-weight":3086,"engine-type":"ohc","num-of-cylinders":"five","engine-size":131,"fuel-system":"mpfi","bore":3.13,"stroke":3.4,"compression-ratio":8.3,"horsepower":140.0,"peak-rpm":5500.0,"city-mpg":17,"highway-mpg":20,"price":23875.0,"avg-mpg":18.5},{"symboling":0,"normalized-losses":null,"make":"audi","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"4wd","engine-location":"front","wheel-base":99.5,"length":178.2,"width":67.9,"height":52.0,"curb-weight":3053,"engine-type":"ohc","num-of-cylinders":"five","engine-size":131,"fuel-system":"mpfi","bore":3.13,"stroke":3.4,"compression-ratio":7.0,"horsepower":160.0,"peak-rpm":5500.0,"city-mpg":16,"highway-mpg":22,"price":null,"avg-mpg":19.0},{"symboling":2,"normalized-losses":192.0,"make":"bmw","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":101.2,"length":176.8,"width":64.8,"height":54.3,"curb-weight":2395,"engine-type":"ohc","num-of-cylinders":"four","engine-size":108,"fuel-system":"mpfi","bore":3.5,"stroke":2.8,"compression-ratio":8.8,"horsepower":101.0,"peak-rpm":5800.0,"city-mpg":23,"highway-mpg":29,"price":16430.0,"avg-mpg":26.0},{"symboling":0,"normalized-losses":192.0,"make":"bmw","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":101.2,"length":176.8,"width":64.8,"height":54.3,"curb-weight":2395,"engine-type":"ohc","num-of-cylinders":"four","engine-size":108,"fuel-system":"mpfi","bore":3.5,"stroke":2.8,"compression-ratio":8.8,"horsepower":101.0,"peak-rpm":5800.0,"city-mpg":23,"highway-mpg":29,"price":16925.0,"avg-mpg":26.0},{"symboling":0,"normalized-losses":188.0,"make":"bmw","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":101.2,"length":176.8,"width":64.8,"height":54.3,"curb-weight":2710,"engine-type":"ohc","num-of-cylinders":"six","engine-size":164,"fuel-system":"mpfi","bore":3.31,"stroke":3.19,"compression-ratio":9.0,"horsepower":121.0,"peak-rpm":4250.0,"city-mpg":21,"highway-mpg":28,"price":20970.0,"avg-mpg":24.5},{"symboling":0,"normalized-losses":188.0,"make":"bmw","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":101.2,"length":176.8,"width":64.8,"height":54.3,"curb-weight":2765,"engine-type":"ohc","num-of-cylinders":"six","engine-size":164,"fuel-system":"mpfi","bore":3.31,"stroke":3.19,"compression-ratio":9.0,"horsepower":121.0,"peak-rpm":4250.0,"city-mpg":21,"highway-mpg":28,"price":21105.0,"avg-mpg":24.5},{"symboling":1,"normalized-losses":null,"make":"bmw","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":103.5,"length":189.0,"width":66.9,"height":55.7,"curb-weight":3055,"engine-type":"ohc","num-of-cylinders":"six","engine-size":164,"fuel-system":"mpfi","bore":3.31,"stroke":3.19,"compression-ratio":9.0,"horsepower":121.0,"peak-rpm":4250.0,"city-mpg":20,"highway-mpg":25,"price":24565.0,"avg-mpg":22.5},{"symboling":0,"normalized-losses":null,"make":"bmw","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":103.5,"length":189.0,"width":66.9,"height":55.7,"curb-weight":3230,"engine-type":"ohc","num-of-cylinders":"six","engine-size":209,"fuel-system":"mpfi","bore":3.62,"stroke":3.39,"compression-ratio":8.0,"horsepower":182.0,"peak-rpm":5400.0,"city-mpg":16,"highway-mpg":22,"price":30760.0,"avg-mpg":19.0},{"symboling":0,"normalized-losses":null,"make":"bmw","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":103.5,"length":193.8,"width":67.9,"height":53.7,"curb-weight":3380,"engine-type":"ohc","num-of-cylinders":"six","engine-size":209,"fuel-system":"mpfi","bore":3.62,"stroke":3.39,"compression-ratio":8.0,"horsepower":182.0,"peak-rpm":5400.0,"city-mpg":16,"highway-mpg":22,"price":41315.0,"avg-mpg":19.0},{"symboling":0,"normalized-losses":null,"make":"bmw","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":110.0,"length":197.0,"width":70.9,"height":56.3,"curb-weight":3505,"engine-type":"ohc","num-of-cylinders":"six","engine-size":209,"fuel-system":"mpfi","bore":3.62,"stroke":3.39,"compression-ratio":8.0,"horsepower":182.0,"peak-rpm":5400.0,"city-mpg":15,"highway-mpg":20,"price":36880.0,"avg-mpg":17.5},{"symboling":2,"normalized-losses":121.0,"make":"chevrolet","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":88.4,"length":141.1,"width":60.3,"height":53.2,"curb-weight":1488,"engine-type":"l","num-of-cylinders":"three","engine-size":61,"fuel-system":"2bbl","bore":2.91,"stroke":3.03,"compression-ratio":9.5,"horsepower":48.0,"peak-rpm":5100.0,"city-mpg":47,"highway-mpg":53,"price":5151.0,"avg-mpg":50.0},{"symboling":1,"normalized-losses":98.0,"make":"chevrolet","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":155.9,"width":63.6,"height":52.0,"curb-weight":1874,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":3.03,"stroke":3.11,"compression-ratio":9.6,"horsepower":70.0,"peak-rpm":5400.0,"city-mpg":38,"highway-mpg":43,"price":6295.0,"avg-mpg":40.5},{"symboling":0,"normalized-losses":81.0,"make":"chevrolet","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":158.8,"width":63.6,"height":52.0,"curb-weight":1909,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":3.03,"stroke":3.11,"compression-ratio":9.6,"horsepower":70.0,"peak-rpm":5400.0,"city-mpg":38,"highway-mpg":43,"price":6575.0,"avg-mpg":40.5},{"symboling":1,"normalized-losses":118.0,"make":"dodge","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.8,"curb-weight":1876,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.41,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":37,"highway-mpg":41,"price":5572.0,"avg-mpg":39.0},{"symboling":1,"normalized-losses":118.0,"make":"dodge","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.8,"curb-weight":1876,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":6377.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":118.0,"make":"dodge","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.8,"curb-weight":2128,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"mpfi","bore":3.03,"stroke":3.39,"compression-ratio":7.6,"horsepower":102.0,"peak-rpm":5500.0,"city-mpg":24,"highway-mpg":30,"price":7957.0,"avg-mpg":27.0},{"symboling":1,"normalized-losses":148.0,"make":"dodge","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.6,"curb-weight":1967,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":6229.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":148.0,"make":"dodge","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.6,"curb-weight":1989,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":6692.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":148.0,"make":"dodge","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.6,"curb-weight":1989,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":7609.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":148.0,"make":"dodge","fuel-type":"gas","aspiration":"turbo","num-of-doors":null,"body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.6,"curb-weight":2191,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"mpfi","bore":3.03,"stroke":3.39,"compression-ratio":7.6,"horsepower":102.0,"peak-rpm":5500.0,"city-mpg":24,"highway-mpg":30,"price":8558.0,"avg-mpg":27.0},{"symboling":-1,"normalized-losses":110.0,"make":"dodge","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":103.3,"length":174.6,"width":64.6,"height":59.8,"curb-weight":2535,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.34,"stroke":3.46,"compression-ratio":8.5,"horsepower":88.0,"peak-rpm":5000.0,"city-mpg":24,"highway-mpg":30,"price":8921.0,"avg-mpg":27.0},{"symboling":3,"normalized-losses":145.0,"make":"dodge","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.9,"length":173.2,"width":66.3,"height":50.2,"curb-weight":2811,"engine-type":"ohc","num-of-cylinders":"four","engine-size":156,"fuel-system":"mfi","bore":3.6,"stroke":3.9,"compression-ratio":7.0,"horsepower":145.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":12964.0,"avg-mpg":21.5},{"symboling":2,"normalized-losses":137.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":86.6,"length":144.6,"width":63.9,"height":50.8,"curb-weight":1713,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"1bbl","bore":2.91,"stroke":3.41,"compression-ratio":9.6,"horsepower":58.0,"peak-rpm":4800.0,"city-mpg":49,"highway-mpg":54,"price":6479.0,"avg-mpg":51.5},{"symboling":2,"normalized-losses":137.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":86.6,"length":144.6,"width":63.9,"height":50.8,"curb-weight":1819,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"1bbl","bore":2.91,"stroke":3.41,"compression-ratio":9.2,"horsepower":76.0,"peak-rpm":6000.0,"city-mpg":31,"highway-mpg":38,"price":6855.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":101.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":150.0,"width":64.0,"height":52.6,"curb-weight":1837,"engine-type":"ohc","num-of-cylinders":"four","engine-size":79,"fuel-system":"1bbl","bore":2.91,"stroke":3.07,"compression-ratio":10.1,"horsepower":60.0,"peak-rpm":5500.0,"city-mpg":38,"highway-mpg":42,"price":5399.0,"avg-mpg":40.0},{"symboling":1,"normalized-losses":101.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":150.0,"width":64.0,"height":52.6,"curb-weight":1940,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"1bbl","bore":2.91,"stroke":3.41,"compression-ratio":9.2,"horsepower":76.0,"peak-rpm":6000.0,"city-mpg":30,"highway-mpg":34,"price":6529.0,"avg-mpg":32.0},{"symboling":1,"normalized-losses":101.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":150.0,"width":64.0,"height":52.6,"curb-weight":1956,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"1bbl","bore":2.91,"stroke":3.41,"compression-ratio":9.2,"horsepower":76.0,"peak-rpm":6000.0,"city-mpg":30,"highway-mpg":34,"price":7129.0,"avg-mpg":32.0},{"symboling":0,"normalized-losses":110.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.5,"length":163.4,"width":64.0,"height":54.5,"curb-weight":2010,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"1bbl","bore":2.91,"stroke":3.41,"compression-ratio":9.2,"horsepower":76.0,"peak-rpm":6000.0,"city-mpg":30,"highway-mpg":34,"price":7295.0,"avg-mpg":32.0},{"symboling":0,"normalized-losses":78.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":96.5,"length":157.1,"width":63.9,"height":58.3,"curb-weight":2024,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"1bbl","bore":2.92,"stroke":3.41,"compression-ratio":9.2,"horsepower":76.0,"peak-rpm":6000.0,"city-mpg":30,"highway-mpg":34,"price":7295.0,"avg-mpg":32.0},{"symboling":0,"normalized-losses":106.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":96.5,"length":167.5,"width":65.2,"height":53.3,"curb-weight":2236,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"1bbl","bore":3.15,"stroke":3.58,"compression-ratio":9.0,"horsepower":86.0,"peak-rpm":5800.0,"city-mpg":27,"highway-mpg":33,"price":7895.0,"avg-mpg":30.0},{"symboling":0,"normalized-losses":106.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":96.5,"length":167.5,"width":65.2,"height":53.3,"curb-weight":2289,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"1bbl","bore":3.15,"stroke":3.58,"compression-ratio":9.0,"horsepower":86.0,"peak-rpm":5800.0,"city-mpg":27,"highway-mpg":33,"price":9095.0,"avg-mpg":30.0},{"symboling":0,"normalized-losses":85.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.5,"length":175.4,"width":65.2,"height":54.1,"curb-weight":2304,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"1bbl","bore":3.15,"stroke":3.58,"compression-ratio":9.0,"horsepower":86.0,"peak-rpm":5800.0,"city-mpg":27,"highway-mpg":33,"price":8845.0,"avg-mpg":30.0},{"symboling":0,"normalized-losses":85.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.5,"length":175.4,"width":62.5,"height":54.1,"curb-weight":2372,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"1bbl","bore":3.15,"stroke":3.58,"compression-ratio":9.0,"horsepower":86.0,"peak-rpm":5800.0,"city-mpg":27,"highway-mpg":33,"price":10295.0,"avg-mpg":30.0},{"symboling":0,"normalized-losses":85.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.5,"length":175.4,"width":65.2,"height":54.1,"curb-weight":2465,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"mpfi","bore":3.15,"stroke":3.58,"compression-ratio":9.0,"horsepower":101.0,"peak-rpm":5800.0,"city-mpg":24,"highway-mpg":28,"price":12945.0,"avg-mpg":26.0},{"symboling":1,"normalized-losses":107.0,"make":"honda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.5,"length":169.1,"width":66.0,"height":51.0,"curb-weight":2293,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"2bbl","bore":3.15,"stroke":3.58,"compression-ratio":9.1,"horsepower":100.0,"peak-rpm":5500.0,"city-mpg":25,"highway-mpg":31,"price":10345.0,"avg-mpg":28.0},{"symboling":0,"normalized-losses":null,"make":"isuzu","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":94.3,"length":170.7,"width":61.8,"height":53.5,"curb-weight":2337,"engine-type":"ohc","num-of-cylinders":"four","engine-size":111,"fuel-system":"2bbl","bore":3.31,"stroke":3.23,"compression-ratio":8.5,"horsepower":78.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":29,"price":6785.0,"avg-mpg":26.5},{"symboling":1,"normalized-losses":null,"make":"isuzu","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":155.9,"width":63.6,"height":52.0,"curb-weight":1874,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":3.03,"stroke":3.11,"compression-ratio":9.6,"horsepower":70.0,"peak-rpm":5400.0,"city-mpg":38,"highway-mpg":43,"price":null,"avg-mpg":40.5},{"symboling":0,"normalized-losses":null,"make":"isuzu","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":155.9,"width":63.6,"height":52.0,"curb-weight":1909,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":3.03,"stroke":3.11,"compression-ratio":9.6,"horsepower":70.0,"peak-rpm":5400.0,"city-mpg":38,"highway-mpg":43,"price":null,"avg-mpg":40.5},{"symboling":2,"normalized-losses":null,"make":"isuzu","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":96.0,"length":172.6,"width":65.2,"height":51.4,"curb-weight":2734,"engine-type":"ohc","num-of-cylinders":"four","engine-size":119,"fuel-system":"spfi","bore":3.43,"stroke":3.23,"compression-ratio":9.2,"horsepower":90.0,"peak-rpm":5000.0,"city-mpg":24,"highway-mpg":29,"price":11048.0,"avg-mpg":26.5},{"symboling":0,"normalized-losses":145.0,"make":"jaguar","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":113.0,"length":199.6,"width":69.6,"height":52.8,"curb-weight":4066,"engine-type":"dohc","num-of-cylinders":"six","engine-size":258,"fuel-system":"mpfi","bore":3.63,"stroke":4.17,"compression-ratio":8.1,"horsepower":176.0,"peak-rpm":4750.0,"city-mpg":15,"highway-mpg":19,"price":32250.0,"avg-mpg":17.0},{"symboling":0,"normalized-losses":null,"make":"jaguar","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":113.0,"length":199.6,"width":69.6,"height":52.8,"curb-weight":4066,"engine-type":"dohc","num-of-cylinders":"six","engine-size":258,"fuel-system":"mpfi","bore":3.63,"stroke":4.17,"compression-ratio":8.1,"horsepower":176.0,"peak-rpm":4750.0,"city-mpg":15,"highway-mpg":19,"price":35550.0,"avg-mpg":17.0},{"symboling":0,"normalized-losses":null,"make":"jaguar","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":102.0,"length":191.7,"width":70.6,"height":47.8,"curb-weight":3950,"engine-type":"ohcv","num-of-cylinders":"twelve","engine-size":326,"fuel-system":"mpfi","bore":3.54,"stroke":2.76,"compression-ratio":11.5,"horsepower":262.0,"peak-rpm":5000.0,"city-mpg":13,"highway-mpg":17,"price":36000.0,"avg-mpg":15.0},{"symboling":1,"normalized-losses":104.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.1,"length":159.1,"width":64.2,"height":54.1,"curb-weight":1890,"engine-type":"ohc","num-of-cylinders":"four","engine-size":91,"fuel-system":"2bbl","bore":3.03,"stroke":3.15,"compression-ratio":9.0,"horsepower":68.0,"peak-rpm":5000.0,"city-mpg":30,"highway-mpg":31,"price":5195.0,"avg-mpg":30.5},{"symboling":1,"normalized-losses":104.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.1,"length":159.1,"width":64.2,"height":54.1,"curb-weight":1900,"engine-type":"ohc","num-of-cylinders":"four","engine-size":91,"fuel-system":"2bbl","bore":3.03,"stroke":3.15,"compression-ratio":9.0,"horsepower":68.0,"peak-rpm":5000.0,"city-mpg":31,"highway-mpg":38,"price":6095.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":104.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.1,"length":159.1,"width":64.2,"height":54.1,"curb-weight":1905,"engine-type":"ohc","num-of-cylinders":"four","engine-size":91,"fuel-system":"2bbl","bore":3.03,"stroke":3.15,"compression-ratio":9.0,"horsepower":68.0,"peak-rpm":5000.0,"city-mpg":31,"highway-mpg":38,"price":6795.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":113.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":93.1,"length":166.8,"width":64.2,"height":54.1,"curb-weight":1945,"engine-type":"ohc","num-of-cylinders":"four","engine-size":91,"fuel-system":"2bbl","bore":3.03,"stroke":3.15,"compression-ratio":9.0,"horsepower":68.0,"peak-rpm":5000.0,"city-mpg":31,"highway-mpg":38,"price":6695.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":113.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":93.1,"length":166.8,"width":64.2,"height":54.1,"curb-weight":1950,"engine-type":"ohc","num-of-cylinders":"four","engine-size":91,"fuel-system":"2bbl","bore":3.08,"stroke":3.15,"compression-ratio":9.0,"horsepower":68.0,"peak-rpm":5000.0,"city-mpg":31,"highway-mpg":38,"price":7395.0,"avg-mpg":34.5},{"symboling":3,"normalized-losses":150.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":95.3,"length":169.0,"width":65.7,"height":49.6,"curb-weight":2380,"engine-type":"rotor","num-of-cylinders":"two","engine-size":70,"fuel-system":"4bbl","bore":null,"stroke":null,"compression-ratio":9.4,"horsepower":101.0,"peak-rpm":6000.0,"city-mpg":17,"highway-mpg":23,"price":10945.0,"avg-mpg":20.0},{"symboling":3,"normalized-losses":150.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":95.3,"length":169.0,"width":65.7,"height":49.6,"curb-weight":2380,"engine-type":"rotor","num-of-cylinders":"two","engine-size":70,"fuel-system":"4bbl","bore":null,"stroke":null,"compression-ratio":9.4,"horsepower":101.0,"peak-rpm":6000.0,"city-mpg":17,"highway-mpg":23,"price":11845.0,"avg-mpg":20.0},{"symboling":3,"normalized-losses":150.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":95.3,"length":169.0,"width":65.7,"height":49.6,"curb-weight":2385,"engine-type":"rotor","num-of-cylinders":"two","engine-size":70,"fuel-system":"4bbl","bore":null,"stroke":null,"compression-ratio":9.4,"horsepower":101.0,"peak-rpm":6000.0,"city-mpg":17,"highway-mpg":23,"price":13645.0,"avg-mpg":20.0},{"symboling":3,"normalized-losses":150.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":95.3,"length":169.0,"width":65.7,"height":49.6,"curb-weight":2500,"engine-type":"rotor","num-of-cylinders":"two","engine-size":80,"fuel-system":"mpfi","bore":null,"stroke":null,"compression-ratio":9.4,"horsepower":135.0,"peak-rpm":6000.0,"city-mpg":16,"highway-mpg":23,"price":15645.0,"avg-mpg":19.5},{"symboling":1,"normalized-losses":129.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":98.8,"length":177.8,"width":66.5,"height":53.7,"curb-weight":2385,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.39,"stroke":3.39,"compression-ratio":8.6,"horsepower":84.0,"peak-rpm":4800.0,"city-mpg":26,"highway-mpg":32,"price":8845.0,"avg-mpg":29.0},{"symboling":0,"normalized-losses":115.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":98.8,"length":177.8,"width":66.5,"height":55.5,"curb-weight":2410,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.39,"stroke":3.39,"compression-ratio":8.6,"horsepower":84.0,"peak-rpm":4800.0,"city-mpg":26,"highway-mpg":32,"price":8495.0,"avg-mpg":29.0},{"symboling":1,"normalized-losses":129.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":98.8,"length":177.8,"width":66.5,"height":53.7,"curb-weight":2385,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.39,"stroke":3.39,"compression-ratio":8.6,"horsepower":84.0,"peak-rpm":4800.0,"city-mpg":26,"highway-mpg":32,"price":10595.0,"avg-mpg":29.0},{"symboling":0,"normalized-losses":115.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":98.8,"length":177.8,"width":66.5,"height":55.5,"curb-weight":2410,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.39,"stroke":3.39,"compression-ratio":8.6,"horsepower":84.0,"peak-rpm":4800.0,"city-mpg":26,"highway-mpg":32,"price":10245.0,"avg-mpg":29.0},{"symboling":0,"normalized-losses":null,"make":"mazda","fuel-type":"diesel","aspiration":"std","num-of-doors":null,"body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":98.8,"length":177.8,"width":66.5,"height":55.5,"curb-weight":2443,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"idi","bore":3.39,"stroke":3.39,"compression-ratio":22.7,"horsepower":64.0,"peak-rpm":4650.0,"city-mpg":36,"highway-mpg":42,"price":10795.0,"avg-mpg":39.0},{"symboling":0,"normalized-losses":115.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":98.8,"length":177.8,"width":66.5,"height":55.5,"curb-weight":2425,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.39,"stroke":3.39,"compression-ratio":8.6,"horsepower":84.0,"peak-rpm":4800.0,"city-mpg":26,"highway-mpg":32,"price":11245.0,"avg-mpg":29.0},{"symboling":0,"normalized-losses":118.0,"make":"mazda","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":104.9,"length":175.0,"width":66.1,"height":54.4,"curb-weight":2670,"engine-type":"ohc","num-of-cylinders":"four","engine-size":140,"fuel-system":"mpfi","bore":3.76,"stroke":3.16,"compression-ratio":8.0,"horsepower":120.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":27,"price":18280.0,"avg-mpg":23.0},{"symboling":0,"normalized-losses":null,"make":"mazda","fuel-type":"diesel","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":104.9,"length":175.0,"width":66.1,"height":54.4,"curb-weight":2700,"engine-type":"ohc","num-of-cylinders":"four","engine-size":134,"fuel-system":"idi","bore":3.43,"stroke":3.64,"compression-ratio":22.0,"horsepower":72.0,"peak-rpm":4200.0,"city-mpg":31,"highway-mpg":39,"price":18344.0,"avg-mpg":35.0},{"symboling":-1,"normalized-losses":93.0,"make":"mercedes-benz","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":110.0,"length":190.9,"width":70.3,"height":56.5,"curb-weight":3515,"engine-type":"ohc","num-of-cylinders":"five","engine-size":183,"fuel-system":"idi","bore":3.58,"stroke":3.64,"compression-ratio":21.5,"horsepower":123.0,"peak-rpm":4350.0,"city-mpg":22,"highway-mpg":25,"price":25552.0,"avg-mpg":23.5},{"symboling":-1,"normalized-losses":93.0,"make":"mercedes-benz","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":110.0,"length":190.9,"width":70.3,"height":58.7,"curb-weight":3750,"engine-type":"ohc","num-of-cylinders":"five","engine-size":183,"fuel-system":"idi","bore":3.58,"stroke":3.64,"compression-ratio":21.5,"horsepower":123.0,"peak-rpm":4350.0,"city-mpg":22,"highway-mpg":25,"price":28248.0,"avg-mpg":23.5},{"symboling":0,"normalized-losses":93.0,"make":"mercedes-benz","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"two","body-style":"hardtop","drive-wheels":"rwd","engine-location":"front","wheel-base":106.7,"length":187.5,"width":70.3,"height":54.9,"curb-weight":3495,"engine-type":"ohc","num-of-cylinders":"five","engine-size":183,"fuel-system":"idi","bore":3.58,"stroke":3.64,"compression-ratio":21.5,"horsepower":123.0,"peak-rpm":4350.0,"city-mpg":22,"highway-mpg":25,"price":28176.0,"avg-mpg":23.5},{"symboling":-1,"normalized-losses":93.0,"make":"mercedes-benz","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":115.6,"length":202.6,"width":71.7,"height":56.3,"curb-weight":3770,"engine-type":"ohc","num-of-cylinders":"five","engine-size":183,"fuel-system":"idi","bore":3.58,"stroke":3.64,"compression-ratio":21.5,"horsepower":123.0,"peak-rpm":4350.0,"city-mpg":22,"highway-mpg":25,"price":31600.0,"avg-mpg":23.5},{"symboling":-1,"normalized-losses":null,"make":"mercedes-benz","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":115.6,"length":202.6,"width":71.7,"height":56.5,"curb-weight":3740,"engine-type":"ohcv","num-of-cylinders":"eight","engine-size":234,"fuel-system":"mpfi","bore":3.46,"stroke":3.1,"compression-ratio":8.3,"horsepower":155.0,"peak-rpm":4750.0,"city-mpg":16,"highway-mpg":18,"price":34184.0,"avg-mpg":17.0},{"symboling":3,"normalized-losses":142.0,"make":"mercedes-benz","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"convertible","drive-wheels":"rwd","engine-location":"front","wheel-base":96.6,"length":180.3,"width":70.5,"height":50.8,"curb-weight":3685,"engine-type":"ohcv","num-of-cylinders":"eight","engine-size":234,"fuel-system":"mpfi","bore":3.46,"stroke":3.1,"compression-ratio":8.3,"horsepower":155.0,"peak-rpm":4750.0,"city-mpg":16,"highway-mpg":18,"price":35056.0,"avg-mpg":17.0},{"symboling":0,"normalized-losses":null,"make":"mercedes-benz","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":120.9,"length":208.1,"width":71.7,"height":56.7,"curb-weight":3900,"engine-type":"ohcv","num-of-cylinders":"eight","engine-size":308,"fuel-system":"mpfi","bore":3.8,"stroke":3.35,"compression-ratio":8.0,"horsepower":184.0,"peak-rpm":4500.0,"city-mpg":14,"highway-mpg":16,"price":40960.0,"avg-mpg":15.0},{"symboling":1,"normalized-losses":null,"make":"mercedes-benz","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hardtop","drive-wheels":"rwd","engine-location":"front","wheel-base":112.0,"length":199.2,"width":72.0,"height":55.4,"curb-weight":3715,"engine-type":"ohcv","num-of-cylinders":"eight","engine-size":304,"fuel-system":"mpfi","bore":3.8,"stroke":3.35,"compression-ratio":8.0,"horsepower":184.0,"peak-rpm":4500.0,"city-mpg":14,"highway-mpg":16,"price":45400.0,"avg-mpg":15.0},{"symboling":1,"normalized-losses":null,"make":"mercury","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":102.7,"length":178.4,"width":68.0,"height":54.8,"curb-weight":2910,"engine-type":"ohc","num-of-cylinders":"four","engine-size":140,"fuel-system":"mpfi","bore":3.78,"stroke":3.12,"compression-ratio":8.0,"horsepower":175.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":16503.0,"avg-mpg":21.5},{"symboling":2,"normalized-losses":161.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":64.4,"height":50.8,"curb-weight":1918,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":37,"highway-mpg":41,"price":5389.0,"avg-mpg":39.0},{"symboling":2,"normalized-losses":161.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":64.4,"height":50.8,"curb-weight":1944,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":6189.0,"avg-mpg":34.5},{"symboling":2,"normalized-losses":161.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":64.4,"height":50.8,"curb-weight":2004,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":6669.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":161.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.0,"length":157.3,"width":63.8,"height":50.8,"curb-weight":2145,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"spdi","bore":3.03,"stroke":3.39,"compression-ratio":7.6,"horsepower":102.0,"peak-rpm":5500.0,"city-mpg":24,"highway-mpg":30,"price":7689.0,"avg-mpg":27.0},{"symboling":3,"normalized-losses":153.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":96.3,"length":173.0,"width":65.4,"height":49.4,"curb-weight":2370,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"spdi","bore":3.17,"stroke":3.46,"compression-ratio":7.5,"horsepower":116.0,"peak-rpm":5500.0,"city-mpg":23,"highway-mpg":30,"price":9959.0,"avg-mpg":26.5},{"symboling":3,"normalized-losses":153.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":96.3,"length":173.0,"width":65.4,"height":49.4,"curb-weight":2328,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.35,"stroke":3.46,"compression-ratio":8.5,"horsepower":88.0,"peak-rpm":5000.0,"city-mpg":25,"highway-mpg":32,"price":8499.0,"avg-mpg":28.5},{"symboling":3,"normalized-losses":null,"make":"mitsubishi","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.9,"length":173.2,"width":66.3,"height":50.2,"curb-weight":2833,"engine-type":"ohc","num-of-cylinders":"four","engine-size":156,"fuel-system":"spdi","bore":3.58,"stroke":3.86,"compression-ratio":7.0,"horsepower":145.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":12629.0,"avg-mpg":21.5},{"symboling":3,"normalized-losses":null,"make":"mitsubishi","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.9,"length":173.2,"width":66.3,"height":50.2,"curb-weight":2921,"engine-type":"ohc","num-of-cylinders":"four","engine-size":156,"fuel-system":"spdi","bore":3.59,"stroke":3.86,"compression-ratio":7.0,"horsepower":145.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":14869.0,"avg-mpg":21.5},{"symboling":3,"normalized-losses":null,"make":"mitsubishi","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.9,"length":173.2,"width":66.3,"height":50.2,"curb-weight":2926,"engine-type":"ohc","num-of-cylinders":"four","engine-size":156,"fuel-system":"spdi","bore":3.59,"stroke":3.86,"compression-ratio":7.0,"horsepower":145.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":14489.0,"avg-mpg":21.5},{"symboling":1,"normalized-losses":125.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.3,"length":172.4,"width":65.4,"height":51.6,"curb-weight":2365,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.35,"stroke":3.46,"compression-ratio":8.5,"horsepower":88.0,"peak-rpm":5000.0,"city-mpg":25,"highway-mpg":32,"price":6989.0,"avg-mpg":28.5},{"symboling":1,"normalized-losses":125.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.3,"length":172.4,"width":65.4,"height":51.6,"curb-weight":2405,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.35,"stroke":3.46,"compression-ratio":8.5,"horsepower":88.0,"peak-rpm":5000.0,"city-mpg":25,"highway-mpg":32,"price":8189.0,"avg-mpg":28.5},{"symboling":1,"normalized-losses":125.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.3,"length":172.4,"width":65.4,"height":51.6,"curb-weight":2403,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"spdi","bore":3.17,"stroke":3.46,"compression-ratio":7.5,"horsepower":116.0,"peak-rpm":5500.0,"city-mpg":23,"highway-mpg":30,"price":9279.0,"avg-mpg":26.5},{"symboling":-1,"normalized-losses":137.0,"make":"mitsubishi","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":96.3,"length":172.4,"width":65.4,"height":51.6,"curb-weight":2403,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"spdi","bore":3.17,"stroke":3.46,"compression-ratio":7.5,"horsepower":116.0,"peak-rpm":5500.0,"city-mpg":23,"highway-mpg":30,"price":9279.0,"avg-mpg":26.5},{"symboling":1,"normalized-losses":128.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":165.3,"width":63.8,"height":54.5,"curb-weight":1889,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":5499.0,"avg-mpg":34.0},{"symboling":1,"normalized-losses":128.0,"make":"nissan","fuel-type":"diesel","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":165.3,"width":63.8,"height":54.5,"curb-weight":2017,"engine-type":"ohc","num-of-cylinders":"four","engine-size":103,"fuel-system":"idi","bore":2.99,"stroke":3.47,"compression-ratio":21.9,"horsepower":55.0,"peak-rpm":4800.0,"city-mpg":45,"highway-mpg":50,"price":7099.0,"avg-mpg":47.5},{"symboling":1,"normalized-losses":128.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":165.3,"width":63.8,"height":54.5,"curb-weight":1918,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":6649.0,"avg-mpg":34.0},{"symboling":1,"normalized-losses":122.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":165.3,"width":63.8,"height":54.5,"curb-weight":1938,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":6849.0,"avg-mpg":34.0},{"symboling":1,"normalized-losses":103.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":170.2,"width":63.8,"height":53.5,"curb-weight":2024,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":7349.0,"avg-mpg":34.0},{"symboling":1,"normalized-losses":128.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":165.3,"width":63.8,"height":54.5,"curb-weight":1951,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":7299.0,"avg-mpg":34.0},{"symboling":1,"normalized-losses":128.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":165.6,"width":63.8,"height":53.3,"curb-weight":2028,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":7799.0,"avg-mpg":34.0},{"symboling":1,"normalized-losses":122.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":165.3,"width":63.8,"height":54.5,"curb-weight":1971,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":7499.0,"avg-mpg":34.0},{"symboling":1,"normalized-losses":103.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":170.2,"width":63.8,"height":53.5,"curb-weight":2037,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":7999.0,"avg-mpg":34.0},{"symboling":2,"normalized-losses":168.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hardtop","drive-wheels":"fwd","engine-location":"front","wheel-base":95.1,"length":162.4,"width":63.8,"height":53.3,"curb-weight":2008,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.15,"stroke":3.29,"compression-ratio":9.4,"horsepower":69.0,"peak-rpm":5200.0,"city-mpg":31,"highway-mpg":37,"price":8249.0,"avg-mpg":34.0},{"symboling":0,"normalized-losses":106.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":97.2,"length":173.4,"width":65.2,"height":54.7,"curb-weight":2324,"engine-type":"ohc","num-of-cylinders":"four","engine-size":120,"fuel-system":"2bbl","bore":3.33,"stroke":3.47,"compression-ratio":8.5,"horsepower":97.0,"peak-rpm":5200.0,"city-mpg":27,"highway-mpg":34,"price":8949.0,"avg-mpg":30.5},{"symboling":0,"normalized-losses":106.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.2,"length":173.4,"width":65.2,"height":54.7,"curb-weight":2302,"engine-type":"ohc","num-of-cylinders":"four","engine-size":120,"fuel-system":"2bbl","bore":3.33,"stroke":3.47,"compression-ratio":8.5,"horsepower":97.0,"peak-rpm":5200.0,"city-mpg":27,"highway-mpg":34,"price":9549.0,"avg-mpg":30.5},{"symboling":0,"normalized-losses":128.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":100.4,"length":181.7,"width":66.5,"height":55.1,"curb-weight":3095,"engine-type":"ohcv","num-of-cylinders":"six","engine-size":181,"fuel-system":"mpfi","bore":3.43,"stroke":3.27,"compression-ratio":9.0,"horsepower":152.0,"peak-rpm":5200.0,"city-mpg":17,"highway-mpg":22,"price":13499.0,"avg-mpg":19.5},{"symboling":0,"normalized-losses":108.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":100.4,"length":184.6,"width":66.5,"height":56.1,"curb-weight":3296,"engine-type":"ohcv","num-of-cylinders":"six","engine-size":181,"fuel-system":"mpfi","bore":3.43,"stroke":3.27,"compression-ratio":9.0,"horsepower":152.0,"peak-rpm":5200.0,"city-mpg":17,"highway-mpg":22,"price":14399.0,"avg-mpg":19.5},{"symboling":0,"normalized-losses":108.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":100.4,"length":184.6,"width":66.5,"height":55.1,"curb-weight":3060,"engine-type":"ohcv","num-of-cylinders":"six","engine-size":181,"fuel-system":"mpfi","bore":3.43,"stroke":3.27,"compression-ratio":9.0,"horsepower":152.0,"peak-rpm":5200.0,"city-mpg":19,"highway-mpg":25,"price":13499.0,"avg-mpg":22.0},{"symboling":3,"normalized-losses":194.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":91.3,"length":170.7,"width":67.9,"height":49.7,"curb-weight":3071,"engine-type":"ohcv","num-of-cylinders":"six","engine-size":181,"fuel-system":"mpfi","bore":3.43,"stroke":3.27,"compression-ratio":9.0,"horsepower":160.0,"peak-rpm":5200.0,"city-mpg":19,"highway-mpg":25,"price":17199.0,"avg-mpg":22.0},{"symboling":3,"normalized-losses":194.0,"make":"nissan","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":91.3,"length":170.7,"width":67.9,"height":49.7,"curb-weight":3139,"engine-type":"ohcv","num-of-cylinders":"six","engine-size":181,"fuel-system":"mpfi","bore":3.43,"stroke":3.27,"compression-ratio":7.8,"horsepower":200.0,"peak-rpm":5200.0,"city-mpg":17,"highway-mpg":23,"price":19699.0,"avg-mpg":20.0},{"symboling":1,"normalized-losses":231.0,"make":"nissan","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":99.2,"length":178.5,"width":67.9,"height":49.7,"curb-weight":3139,"engine-type":"ohcv","num-of-cylinders":"six","engine-size":181,"fuel-system":"mpfi","bore":3.43,"stroke":3.27,"compression-ratio":9.0,"horsepower":160.0,"peak-rpm":5200.0,"city-mpg":19,"highway-mpg":25,"price":18399.0,"avg-mpg":22.0},{"symboling":0,"normalized-losses":161.0,"make":"peugot","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":107.9,"length":186.7,"width":68.4,"height":56.7,"curb-weight":3020,"engine-type":"l","num-of-cylinders":"four","engine-size":120,"fuel-system":"mpfi","bore":3.46,"stroke":3.19,"compression-ratio":8.4,"horsepower":97.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":11900.0,"avg-mpg":21.5},{"symboling":0,"normalized-losses":161.0,"make":"peugot","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":107.9,"length":186.7,"width":68.4,"height":56.7,"curb-weight":3197,"engine-type":"l","num-of-cylinders":"four","engine-size":152,"fuel-system":"idi","bore":3.7,"stroke":3.52,"compression-ratio":21.0,"horsepower":95.0,"peak-rpm":4150.0,"city-mpg":28,"highway-mpg":33,"price":13200.0,"avg-mpg":30.5},{"symboling":0,"normalized-losses":null,"make":"peugot","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":114.2,"length":198.9,"width":68.4,"height":58.7,"curb-weight":3230,"engine-type":"l","num-of-cylinders":"four","engine-size":120,"fuel-system":"mpfi","bore":3.46,"stroke":3.19,"compression-ratio":8.4,"horsepower":97.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":12440.0,"avg-mpg":21.5},{"symboling":0,"normalized-losses":null,"make":"peugot","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":114.2,"length":198.9,"width":68.4,"height":58.7,"curb-weight":3430,"engine-type":"l","num-of-cylinders":"four","engine-size":152,"fuel-system":"idi","bore":3.7,"stroke":3.52,"compression-ratio":21.0,"horsepower":95.0,"peak-rpm":4150.0,"city-mpg":25,"highway-mpg":25,"price":13860.0,"avg-mpg":25.0},{"symboling":0,"normalized-losses":161.0,"make":"peugot","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":107.9,"length":186.7,"width":68.4,"height":56.7,"curb-weight":3075,"engine-type":"l","num-of-cylinders":"four","engine-size":120,"fuel-system":"mpfi","bore":3.46,"stroke":2.19,"compression-ratio":8.4,"horsepower":95.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":15580.0,"avg-mpg":21.5},{"symboling":0,"normalized-losses":161.0,"make":"peugot","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":107.9,"length":186.7,"width":68.4,"height":56.7,"curb-weight":3252,"engine-type":"l","num-of-cylinders":"four","engine-size":152,"fuel-system":"idi","bore":3.7,"stroke":3.52,"compression-ratio":21.0,"horsepower":95.0,"peak-rpm":4150.0,"city-mpg":28,"highway-mpg":33,"price":16900.0,"avg-mpg":30.5},{"symboling":0,"normalized-losses":null,"make":"peugot","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":114.2,"length":198.9,"width":68.4,"height":56.7,"curb-weight":3285,"engine-type":"l","num-of-cylinders":"four","engine-size":120,"fuel-system":"mpfi","bore":3.46,"stroke":2.19,"compression-ratio":8.4,"horsepower":95.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":16695.0,"avg-mpg":21.5},{"symboling":0,"normalized-losses":null,"make":"peugot","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":114.2,"length":198.9,"width":68.4,"height":58.7,"curb-weight":3485,"engine-type":"l","num-of-cylinders":"four","engine-size":152,"fuel-system":"idi","bore":3.7,"stroke":3.52,"compression-ratio":21.0,"horsepower":95.0,"peak-rpm":4150.0,"city-mpg":25,"highway-mpg":25,"price":17075.0,"avg-mpg":25.0},{"symboling":0,"normalized-losses":161.0,"make":"peugot","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":107.9,"length":186.7,"width":68.4,"height":56.7,"curb-weight":3075,"engine-type":"l","num-of-cylinders":"four","engine-size":120,"fuel-system":"mpfi","bore":3.46,"stroke":3.19,"compression-ratio":8.4,"horsepower":97.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":16630.0,"avg-mpg":21.5},{"symboling":0,"normalized-losses":161.0,"make":"peugot","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":107.9,"length":186.7,"width":68.4,"height":56.7,"curb-weight":3252,"engine-type":"l","num-of-cylinders":"four","engine-size":152,"fuel-system":"idi","bore":3.7,"stroke":3.52,"compression-ratio":21.0,"horsepower":95.0,"peak-rpm":4150.0,"city-mpg":28,"highway-mpg":33,"price":17950.0,"avg-mpg":30.5},{"symboling":0,"normalized-losses":161.0,"make":"peugot","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":108.0,"length":186.7,"width":68.3,"height":56.0,"curb-weight":3130,"engine-type":"l","num-of-cylinders":"four","engine-size":134,"fuel-system":"mpfi","bore":3.61,"stroke":3.21,"compression-ratio":7.0,"horsepower":142.0,"peak-rpm":5600.0,"city-mpg":18,"highway-mpg":24,"price":18150.0,"avg-mpg":21.0},{"symboling":1,"normalized-losses":119.0,"make":"plymouth","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.8,"curb-weight":1918,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":37,"highway-mpg":41,"price":5572.0,"avg-mpg":39.0},{"symboling":1,"normalized-losses":119.0,"make":"plymouth","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.8,"curb-weight":2128,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"spdi","bore":3.03,"stroke":3.39,"compression-ratio":7.6,"horsepower":102.0,"peak-rpm":5500.0,"city-mpg":24,"highway-mpg":30,"price":7957.0,"avg-mpg":27.0},{"symboling":1,"normalized-losses":154.0,"make":"plymouth","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.3,"width":63.8,"height":50.6,"curb-weight":1967,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":6229.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":154.0,"make":"plymouth","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":167.3,"width":63.8,"height":50.8,"curb-weight":1989,"engine-type":"ohc","num-of-cylinders":"four","engine-size":90,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":6692.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":154.0,"make":"plymouth","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":167.3,"width":63.8,"height":50.8,"curb-weight":2191,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"2bbl","bore":2.97,"stroke":3.23,"compression-ratio":9.4,"horsepower":68.0,"peak-rpm":5500.0,"city-mpg":31,"highway-mpg":38,"price":7609.0,"avg-mpg":34.5},{"symboling":-1,"normalized-losses":74.0,"make":"plymouth","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":103.3,"length":174.6,"width":64.6,"height":59.8,"curb-weight":2535,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"2bbl","bore":3.35,"stroke":3.46,"compression-ratio":8.5,"horsepower":88.0,"peak-rpm":5000.0,"city-mpg":24,"highway-mpg":30,"price":8921.0,"avg-mpg":27.0},{"symboling":3,"normalized-losses":null,"make":"plymouth","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":95.9,"length":173.2,"width":66.3,"height":50.2,"curb-weight":2818,"engine-type":"ohc","num-of-cylinders":"four","engine-size":156,"fuel-system":"spdi","bore":3.59,"stroke":3.86,"compression-ratio":7.0,"horsepower":145.0,"peak-rpm":5000.0,"city-mpg":19,"highway-mpg":24,"price":12764.0,"avg-mpg":21.5},{"symboling":3,"normalized-losses":186.0,"make":"porsche","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":94.5,"length":168.9,"width":68.3,"height":50.2,"curb-weight":2778,"engine-type":"ohc","num-of-cylinders":"four","engine-size":151,"fuel-system":"mpfi","bore":3.94,"stroke":3.11,"compression-ratio":9.5,"horsepower":143.0,"peak-rpm":5500.0,"city-mpg":19,"highway-mpg":27,"price":22018.0,"avg-mpg":23.0},{"symboling":3,"normalized-losses":null,"make":"porsche","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hardtop","drive-wheels":"rwd","engine-location":"rear","wheel-base":89.5,"length":168.9,"width":65.0,"height":51.6,"curb-weight":2756,"engine-type":"ohcf","num-of-cylinders":"six","engine-size":194,"fuel-system":"mpfi","bore":3.74,"stroke":2.9,"compression-ratio":9.5,"horsepower":207.0,"peak-rpm":5900.0,"city-mpg":17,"highway-mpg":25,"price":32528.0,"avg-mpg":21.0},{"symboling":3,"normalized-losses":null,"make":"porsche","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hardtop","drive-wheels":"rwd","engine-location":"rear","wheel-base":89.5,"length":168.9,"width":65.0,"height":51.6,"curb-weight":2756,"engine-type":"ohcf","num-of-cylinders":"six","engine-size":194,"fuel-system":"mpfi","bore":3.74,"stroke":2.9,"compression-ratio":9.5,"horsepower":207.0,"peak-rpm":5900.0,"city-mpg":17,"highway-mpg":25,"price":34028.0,"avg-mpg":21.0},{"symboling":3,"normalized-losses":null,"make":"porsche","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"convertible","drive-wheels":"rwd","engine-location":"rear","wheel-base":89.5,"length":168.9,"width":65.0,"height":51.6,"curb-weight":2800,"engine-type":"ohcf","num-of-cylinders":"six","engine-size":194,"fuel-system":"mpfi","bore":3.74,"stroke":2.9,"compression-ratio":9.5,"horsepower":207.0,"peak-rpm":5900.0,"city-mpg":17,"highway-mpg":25,"price":37028.0,"avg-mpg":21.0},{"symboling":1,"normalized-losses":null,"make":"porsche","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":98.4,"length":175.7,"width":72.3,"height":50.5,"curb-weight":3366,"engine-type":"dohcv","num-of-cylinders":"eight","engine-size":203,"fuel-system":"mpfi","bore":3.94,"stroke":3.11,"compression-ratio":10.0,"horsepower":288.0,"peak-rpm":5750.0,"city-mpg":17,"highway-mpg":28,"price":null,"avg-mpg":22.5},{"symboling":0,"normalized-losses":null,"make":"renault","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":96.1,"length":181.5,"width":66.5,"height":55.2,"curb-weight":2579,"engine-type":"ohc","num-of-cylinders":"four","engine-size":132,"fuel-system":"mpfi","bore":3.46,"stroke":3.9,"compression-ratio":8.7,"horsepower":null,"peak-rpm":null,"city-mpg":23,"highway-mpg":31,"price":9295.0,"avg-mpg":27.0},{"symboling":2,"normalized-losses":null,"make":"renault","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":96.1,"length":176.8,"width":66.6,"height":50.5,"curb-weight":2460,"engine-type":"ohc","num-of-cylinders":"four","engine-size":132,"fuel-system":"mpfi","bore":3.46,"stroke":3.9,"compression-ratio":8.7,"horsepower":null,"peak-rpm":null,"city-mpg":23,"highway-mpg":31,"price":9895.0,"avg-mpg":27.0},{"symboling":3,"normalized-losses":150.0,"make":"saab","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":99.1,"length":186.6,"width":66.5,"height":56.1,"curb-weight":2658,"engine-type":"ohc","num-of-cylinders":"four","engine-size":121,"fuel-system":"mpfi","bore":3.54,"stroke":3.07,"compression-ratio":9.31,"horsepower":110.0,"peak-rpm":5250.0,"city-mpg":21,"highway-mpg":28,"price":11850.0,"avg-mpg":24.5},{"symboling":2,"normalized-losses":104.0,"make":"saab","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":99.1,"length":186.6,"width":66.5,"height":56.1,"curb-weight":2695,"engine-type":"ohc","num-of-cylinders":"four","engine-size":121,"fuel-system":"mpfi","bore":3.54,"stroke":3.07,"compression-ratio":9.3,"horsepower":110.0,"peak-rpm":5250.0,"city-mpg":21,"highway-mpg":28,"price":12170.0,"avg-mpg":24.5},{"symboling":3,"normalized-losses":150.0,"make":"saab","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":99.1,"length":186.6,"width":66.5,"height":56.1,"curb-weight":2707,"engine-type":"ohc","num-of-cylinders":"four","engine-size":121,"fuel-system":"mpfi","bore":2.54,"stroke":2.07,"compression-ratio":9.3,"horsepower":110.0,"peak-rpm":5250.0,"city-mpg":21,"highway-mpg":28,"price":15040.0,"avg-mpg":24.5},{"symboling":2,"normalized-losses":104.0,"make":"saab","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":99.1,"length":186.6,"width":66.5,"height":56.1,"curb-weight":2758,"engine-type":"ohc","num-of-cylinders":"four","engine-size":121,"fuel-system":"mpfi","bore":3.54,"stroke":3.07,"compression-ratio":9.3,"horsepower":110.0,"peak-rpm":5250.0,"city-mpg":21,"highway-mpg":28,"price":15510.0,"avg-mpg":24.5},{"symboling":3,"normalized-losses":150.0,"make":"saab","fuel-type":"gas","aspiration":"turbo","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":99.1,"length":186.6,"width":66.5,"height":56.1,"curb-weight":2808,"engine-type":"dohc","num-of-cylinders":"four","engine-size":121,"fuel-system":"mpfi","bore":3.54,"stroke":3.07,"compression-ratio":9.0,"horsepower":160.0,"peak-rpm":5500.0,"city-mpg":19,"highway-mpg":26,"price":18150.0,"avg-mpg":22.5},{"symboling":2,"normalized-losses":104.0,"make":"saab","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":99.1,"length":186.6,"width":66.5,"height":56.1,"curb-weight":2847,"engine-type":"dohc","num-of-cylinders":"four","engine-size":121,"fuel-system":"mpfi","bore":3.54,"stroke":3.07,"compression-ratio":9.0,"horsepower":160.0,"peak-rpm":5500.0,"city-mpg":19,"highway-mpg":26,"price":18620.0,"avg-mpg":22.5},{"symboling":2,"normalized-losses":83.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":156.9,"width":63.4,"height":53.7,"curb-weight":2050,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":97,"fuel-system":"2bbl","bore":3.62,"stroke":2.36,"compression-ratio":9.0,"horsepower":69.0,"peak-rpm":4900.0,"city-mpg":31,"highway-mpg":36,"price":5118.0,"avg-mpg":33.5},{"symboling":2,"normalized-losses":83.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":93.7,"length":157.9,"width":63.6,"height":53.7,"curb-weight":2120,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"2bbl","bore":3.62,"stroke":2.64,"compression-ratio":8.7,"horsepower":73.0,"peak-rpm":4400.0,"city-mpg":26,"highway-mpg":31,"price":7053.0,"avg-mpg":28.5},{"symboling":2,"normalized-losses":83.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"4wd","engine-location":"front","wheel-base":93.3,"length":157.3,"width":63.8,"height":55.7,"curb-weight":2240,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"2bbl","bore":3.62,"stroke":2.64,"compression-ratio":8.7,"horsepower":73.0,"peak-rpm":4400.0,"city-mpg":26,"highway-mpg":31,"price":7603.0,"avg-mpg":28.5},{"symboling":0,"normalized-losses":102.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.2,"length":172.0,"width":65.4,"height":52.5,"curb-weight":2145,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"2bbl","bore":3.62,"stroke":2.64,"compression-ratio":9.5,"horsepower":82.0,"peak-rpm":4800.0,"city-mpg":32,"highway-mpg":37,"price":7126.0,"avg-mpg":34.5},{"symboling":0,"normalized-losses":102.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.2,"length":172.0,"width":65.4,"height":52.5,"curb-weight":2190,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"2bbl","bore":3.62,"stroke":2.64,"compression-ratio":9.5,"horsepower":82.0,"peak-rpm":4400.0,"city-mpg":28,"highway-mpg":33,"price":7775.0,"avg-mpg":30.5},{"symboling":0,"normalized-losses":102.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.2,"length":172.0,"width":65.4,"height":52.5,"curb-weight":2340,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"mpfi","bore":3.62,"stroke":2.64,"compression-ratio":9.0,"horsepower":94.0,"peak-rpm":5200.0,"city-mpg":26,"highway-mpg":32,"price":9960.0,"avg-mpg":29.0},{"symboling":0,"normalized-losses":102.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"4wd","engine-location":"front","wheel-base":97.0,"length":172.0,"width":65.4,"height":54.3,"curb-weight":2385,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"2bbl","bore":3.62,"stroke":2.64,"compression-ratio":9.0,"horsepower":82.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":25,"price":9233.0,"avg-mpg":24.5},{"symboling":0,"normalized-losses":102.0,"make":"subaru","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"4wd","engine-location":"front","wheel-base":97.0,"length":172.0,"width":65.4,"height":54.3,"curb-weight":2510,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"mpfi","bore":3.62,"stroke":2.64,"compression-ratio":7.7,"horsepower":111.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":29,"price":11259.0,"avg-mpg":26.5},{"symboling":0,"normalized-losses":89.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":97.0,"length":173.5,"width":65.4,"height":53.0,"curb-weight":2290,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"2bbl","bore":3.62,"stroke":2.64,"compression-ratio":9.0,"horsepower":82.0,"peak-rpm":4800.0,"city-mpg":28,"highway-mpg":32,"price":7463.0,"avg-mpg":30.0},{"symboling":0,"normalized-losses":89.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":97.0,"length":173.5,"width":65.4,"height":53.0,"curb-weight":2455,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"mpfi","bore":3.62,"stroke":2.64,"compression-ratio":9.0,"horsepower":94.0,"peak-rpm":5200.0,"city-mpg":25,"highway-mpg":31,"price":10198.0,"avg-mpg":28.0},{"symboling":0,"normalized-losses":85.0,"make":"subaru","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"4wd","engine-location":"front","wheel-base":96.9,"length":173.6,"width":65.4,"height":54.9,"curb-weight":2420,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"2bbl","bore":3.62,"stroke":2.64,"compression-ratio":9.0,"horsepower":82.0,"peak-rpm":4800.0,"city-mpg":23,"highway-mpg":29,"price":8013.0,"avg-mpg":26.0},{"symboling":0,"normalized-losses":85.0,"make":"subaru","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"wagon","drive-wheels":"4wd","engine-location":"front","wheel-base":96.9,"length":173.6,"width":65.4,"height":54.9,"curb-weight":2650,"engine-type":"ohcf","num-of-cylinders":"four","engine-size":108,"fuel-system":"mpfi","bore":3.62,"stroke":2.64,"compression-ratio":7.7,"horsepower":111.0,"peak-rpm":4800.0,"city-mpg":23,"highway-mpg":23,"price":11694.0,"avg-mpg":23.0},{"symboling":1,"normalized-losses":87.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":158.7,"width":63.6,"height":54.5,"curb-weight":1985,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":3.05,"stroke":3.03,"compression-ratio":9.0,"horsepower":62.0,"peak-rpm":4800.0,"city-mpg":35,"highway-mpg":39,"price":5348.0,"avg-mpg":37.0},{"symboling":1,"normalized-losses":87.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":158.7,"width":63.6,"height":54.5,"curb-weight":2040,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":3.05,"stroke":3.03,"compression-ratio":9.0,"horsepower":62.0,"peak-rpm":4800.0,"city-mpg":31,"highway-mpg":38,"price":6338.0,"avg-mpg":34.5},{"symboling":1,"normalized-losses":74.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":158.7,"width":63.6,"height":54.5,"curb-weight":2015,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":3.05,"stroke":3.03,"compression-ratio":9.0,"horsepower":62.0,"peak-rpm":4800.0,"city-mpg":31,"highway-mpg":38,"price":6488.0,"avg-mpg":34.5},{"symboling":0,"normalized-losses":77.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":169.7,"width":63.6,"height":59.1,"curb-weight":2280,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":3.05,"stroke":3.03,"compression-ratio":9.0,"horsepower":62.0,"peak-rpm":4800.0,"city-mpg":31,"highway-mpg":37,"price":6918.0,"avg-mpg":34.0},{"symboling":0,"normalized-losses":81.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"4wd","engine-location":"front","wheel-base":95.7,"length":169.7,"width":63.6,"height":59.1,"curb-weight":2290,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":3.05,"stroke":3.03,"compression-ratio":9.0,"horsepower":62.0,"peak-rpm":4800.0,"city-mpg":27,"highway-mpg":32,"price":7898.0,"avg-mpg":29.5},{"symboling":0,"normalized-losses":91.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"4wd","engine-location":"front","wheel-base":95.7,"length":169.7,"width":63.6,"height":59.1,"curb-weight":3110,"engine-type":"ohc","num-of-cylinders":"four","engine-size":92,"fuel-system":"2bbl","bore":3.05,"stroke":3.03,"compression-ratio":9.0,"horsepower":62.0,"peak-rpm":4800.0,"city-mpg":27,"highway-mpg":32,"price":8778.0,"avg-mpg":29.5},{"symboling":0,"normalized-losses":91.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":166.3,"width":64.4,"height":53.0,"curb-weight":2081,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"2bbl","bore":3.19,"stroke":3.03,"compression-ratio":9.0,"horsepower":70.0,"peak-rpm":4800.0,"city-mpg":30,"highway-mpg":37,"price":6938.0,"avg-mpg":33.5},{"symboling":0,"normalized-losses":91.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":166.3,"width":64.4,"height":52.8,"curb-weight":2109,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"2bbl","bore":3.19,"stroke":3.03,"compression-ratio":9.0,"horsepower":70.0,"peak-rpm":4800.0,"city-mpg":30,"highway-mpg":37,"price":7198.0,"avg-mpg":33.5},{"symboling":0,"normalized-losses":91.0,"make":"toyota","fuel-type":"diesel","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":166.3,"width":64.4,"height":53.0,"curb-weight":2275,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"idi","bore":3.27,"stroke":3.35,"compression-ratio":22.5,"horsepower":56.0,"peak-rpm":4500.0,"city-mpg":34,"highway-mpg":36,"price":7898.0,"avg-mpg":35.0},{"symboling":0,"normalized-losses":91.0,"make":"toyota","fuel-type":"diesel","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":166.3,"width":64.4,"height":52.8,"curb-weight":2275,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"idi","bore":3.27,"stroke":3.35,"compression-ratio":22.5,"horsepower":56.0,"peak-rpm":4500.0,"city-mpg":38,"highway-mpg":47,"price":7788.0,"avg-mpg":42.5},{"symboling":0,"normalized-losses":91.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":166.3,"width":64.4,"height":53.0,"curb-weight":2094,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"2bbl","bore":3.19,"stroke":3.03,"compression-ratio":9.0,"horsepower":70.0,"peak-rpm":4800.0,"city-mpg":38,"highway-mpg":47,"price":7738.0,"avg-mpg":42.5},{"symboling":0,"normalized-losses":91.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":166.3,"width":64.4,"height":52.8,"curb-weight":2122,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"2bbl","bore":3.19,"stroke":3.03,"compression-ratio":9.0,"horsepower":70.0,"peak-rpm":4800.0,"city-mpg":28,"highway-mpg":34,"price":8358.0,"avg-mpg":31.0},{"symboling":0,"normalized-losses":91.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":95.7,"length":166.3,"width":64.4,"height":52.8,"curb-weight":2140,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"2bbl","bore":3.19,"stroke":3.03,"compression-ratio":9.0,"horsepower":70.0,"peak-rpm":4800.0,"city-mpg":28,"highway-mpg":34,"price":9258.0,"avg-mpg":31.0},{"symboling":1,"normalized-losses":168.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":94.5,"length":168.7,"width":64.0,"height":52.6,"curb-weight":2169,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"2bbl","bore":3.19,"stroke":3.03,"compression-ratio":9.0,"horsepower":70.0,"peak-rpm":4800.0,"city-mpg":29,"highway-mpg":34,"price":8058.0,"avg-mpg":31.5},{"symboling":1,"normalized-losses":168.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":94.5,"length":168.7,"width":64.0,"height":52.6,"curb-weight":2204,"engine-type":"ohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"2bbl","bore":3.19,"stroke":3.03,"compression-ratio":9.0,"horsepower":70.0,"peak-rpm":4800.0,"city-mpg":29,"highway-mpg":34,"price":8238.0,"avg-mpg":31.5},{"symboling":1,"normalized-losses":168.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":94.5,"length":168.7,"width":64.0,"height":52.6,"curb-weight":2265,"engine-type":"dohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"mpfi","bore":3.24,"stroke":3.08,"compression-ratio":9.4,"horsepower":112.0,"peak-rpm":6600.0,"city-mpg":26,"highway-mpg":29,"price":9298.0,"avg-mpg":27.5},{"symboling":1,"normalized-losses":168.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":94.5,"length":168.7,"width":64.0,"height":52.6,"curb-weight":2300,"engine-type":"dohc","num-of-cylinders":"four","engine-size":98,"fuel-system":"mpfi","bore":3.24,"stroke":3.08,"compression-ratio":9.4,"horsepower":112.0,"peak-rpm":6600.0,"city-mpg":26,"highway-mpg":29,"price":9538.0,"avg-mpg":27.5},{"symboling":2,"normalized-losses":134.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hardtop","drive-wheels":"rwd","engine-location":"front","wheel-base":98.4,"length":176.2,"width":65.6,"height":52.0,"curb-weight":2540,"engine-type":"ohc","num-of-cylinders":"four","engine-size":146,"fuel-system":"mpfi","bore":3.62,"stroke":3.5,"compression-ratio":9.3,"horsepower":116.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":30,"price":8449.0,"avg-mpg":27.0},{"symboling":2,"normalized-losses":134.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hardtop","drive-wheels":"rwd","engine-location":"front","wheel-base":98.4,"length":176.2,"width":65.6,"height":52.0,"curb-weight":2536,"engine-type":"ohc","num-of-cylinders":"four","engine-size":146,"fuel-system":"mpfi","bore":3.62,"stroke":3.5,"compression-ratio":9.3,"horsepower":116.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":30,"price":9639.0,"avg-mpg":27.0},{"symboling":2,"normalized-losses":134.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":98.4,"length":176.2,"width":65.6,"height":52.0,"curb-weight":2551,"engine-type":"ohc","num-of-cylinders":"four","engine-size":146,"fuel-system":"mpfi","bore":3.62,"stroke":3.5,"compression-ratio":9.3,"horsepower":116.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":30,"price":9989.0,"avg-mpg":27.0},{"symboling":2,"normalized-losses":134.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hardtop","drive-wheels":"rwd","engine-location":"front","wheel-base":98.4,"length":176.2,"width":65.6,"height":52.0,"curb-weight":2679,"engine-type":"ohc","num-of-cylinders":"four","engine-size":146,"fuel-system":"mpfi","bore":3.62,"stroke":3.5,"compression-ratio":9.3,"horsepower":116.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":30,"price":11199.0,"avg-mpg":27.0},{"symboling":2,"normalized-losses":134.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":98.4,"length":176.2,"width":65.6,"height":52.0,"curb-weight":2714,"engine-type":"ohc","num-of-cylinders":"four","engine-size":146,"fuel-system":"mpfi","bore":3.62,"stroke":3.5,"compression-ratio":9.3,"horsepower":116.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":30,"price":11549.0,"avg-mpg":27.0},{"symboling":2,"normalized-losses":134.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"convertible","drive-wheels":"rwd","engine-location":"front","wheel-base":98.4,"length":176.2,"width":65.6,"height":53.0,"curb-weight":2975,"engine-type":"ohc","num-of-cylinders":"four","engine-size":146,"fuel-system":"mpfi","bore":3.62,"stroke":3.5,"compression-ratio":9.3,"horsepower":116.0,"peak-rpm":4800.0,"city-mpg":24,"highway-mpg":30,"price":17669.0,"avg-mpg":27.0},{"symboling":-1,"normalized-losses":65.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":102.4,"length":175.6,"width":66.5,"height":54.9,"curb-weight":2326,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"mpfi","bore":3.31,"stroke":3.54,"compression-ratio":8.7,"horsepower":92.0,"peak-rpm":4200.0,"city-mpg":29,"highway-mpg":34,"price":8948.0,"avg-mpg":31.5},{"symboling":-1,"normalized-losses":65.0,"make":"toyota","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":102.4,"length":175.6,"width":66.5,"height":54.9,"curb-weight":2480,"engine-type":"ohc","num-of-cylinders":"four","engine-size":110,"fuel-system":"idi","bore":3.27,"stroke":3.35,"compression-ratio":22.5,"horsepower":73.0,"peak-rpm":4500.0,"city-mpg":30,"highway-mpg":33,"price":10698.0,"avg-mpg":31.5},{"symboling":-1,"normalized-losses":65.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":102.4,"length":175.6,"width":66.5,"height":53.9,"curb-weight":2414,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"mpfi","bore":3.31,"stroke":3.54,"compression-ratio":8.7,"horsepower":92.0,"peak-rpm":4200.0,"city-mpg":27,"highway-mpg":32,"price":9988.0,"avg-mpg":29.5},{"symboling":-1,"normalized-losses":65.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":102.4,"length":175.6,"width":66.5,"height":54.9,"curb-weight":2414,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"mpfi","bore":3.31,"stroke":3.54,"compression-ratio":8.7,"horsepower":92.0,"peak-rpm":4200.0,"city-mpg":27,"highway-mpg":32,"price":10898.0,"avg-mpg":29.5},{"symboling":-1,"normalized-losses":65.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":102.4,"length":175.6,"width":66.5,"height":53.9,"curb-weight":2458,"engine-type":"ohc","num-of-cylinders":"four","engine-size":122,"fuel-system":"mpfi","bore":3.31,"stroke":3.54,"compression-ratio":8.7,"horsepower":92.0,"peak-rpm":4200.0,"city-mpg":27,"highway-mpg":32,"price":11248.0,"avg-mpg":29.5},{"symboling":3,"normalized-losses":197.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":102.9,"length":183.5,"width":67.7,"height":52.0,"curb-weight":2976,"engine-type":"dohc","num-of-cylinders":"six","engine-size":171,"fuel-system":"mpfi","bore":3.27,"stroke":3.35,"compression-ratio":9.3,"horsepower":161.0,"peak-rpm":5200.0,"city-mpg":20,"highway-mpg":24,"price":16558.0,"avg-mpg":22.0},{"symboling":3,"normalized-losses":197.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"rwd","engine-location":"front","wheel-base":102.9,"length":183.5,"width":67.7,"height":52.0,"curb-weight":3016,"engine-type":"dohc","num-of-cylinders":"six","engine-size":171,"fuel-system":"mpfi","bore":3.27,"stroke":3.35,"compression-ratio":9.3,"horsepower":161.0,"peak-rpm":5200.0,"city-mpg":19,"highway-mpg":24,"price":15998.0,"avg-mpg":21.5},{"symboling":-1,"normalized-losses":90.0,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":104.5,"length":187.8,"width":66.5,"height":54.1,"curb-weight":3131,"engine-type":"dohc","num-of-cylinders":"six","engine-size":171,"fuel-system":"mpfi","bore":3.27,"stroke":3.35,"compression-ratio":9.2,"horsepower":156.0,"peak-rpm":5200.0,"city-mpg":20,"highway-mpg":24,"price":15690.0,"avg-mpg":22.0},{"symboling":-1,"normalized-losses":null,"make":"toyota","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":104.5,"length":187.8,"width":66.5,"height":54.1,"curb-weight":3151,"engine-type":"dohc","num-of-cylinders":"six","engine-size":161,"fuel-system":"mpfi","bore":3.27,"stroke":3.35,"compression-ratio":9.2,"horsepower":156.0,"peak-rpm":5200.0,"city-mpg":19,"highway-mpg":24,"price":15750.0,"avg-mpg":21.5},{"symboling":2,"normalized-losses":122.0,"make":"volkswagen","fuel-type":"diesel","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.3,"length":171.7,"width":65.5,"height":55.7,"curb-weight":2261,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"idi","bore":3.01,"stroke":3.4,"compression-ratio":23.0,"horsepower":52.0,"peak-rpm":4800.0,"city-mpg":37,"highway-mpg":46,"price":7775.0,"avg-mpg":41.5},{"symboling":2,"normalized-losses":122.0,"make":"volkswagen","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.3,"length":171.7,"width":65.5,"height":55.7,"curb-weight":2209,"engine-type":"ohc","num-of-cylinders":"four","engine-size":109,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":9.0,"horsepower":85.0,"peak-rpm":5250.0,"city-mpg":27,"highway-mpg":34,"price":7975.0,"avg-mpg":30.5},{"symboling":2,"normalized-losses":94.0,"make":"volkswagen","fuel-type":"diesel","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.3,"length":171.7,"width":65.5,"height":55.7,"curb-weight":2264,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"idi","bore":3.01,"stroke":3.4,"compression-ratio":23.0,"horsepower":52.0,"peak-rpm":4800.0,"city-mpg":37,"highway-mpg":46,"price":7995.0,"avg-mpg":41.5},{"symboling":2,"normalized-losses":94.0,"make":"volkswagen","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.3,"length":171.7,"width":65.5,"height":55.7,"curb-weight":2212,"engine-type":"ohc","num-of-cylinders":"four","engine-size":109,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":9.0,"horsepower":85.0,"peak-rpm":5250.0,"city-mpg":27,"highway-mpg":34,"price":8195.0,"avg-mpg":30.5},{"symboling":2,"normalized-losses":94.0,"make":"volkswagen","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.3,"length":171.7,"width":65.5,"height":55.7,"curb-weight":2275,"engine-type":"ohc","num-of-cylinders":"four","engine-size":109,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":9.0,"horsepower":85.0,"peak-rpm":5250.0,"city-mpg":27,"highway-mpg":34,"price":8495.0,"avg-mpg":30.5},{"symboling":2,"normalized-losses":94.0,"make":"volkswagen","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.3,"length":171.7,"width":65.5,"height":55.7,"curb-weight":2319,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"idi","bore":3.01,"stroke":3.4,"compression-ratio":23.0,"horsepower":68.0,"peak-rpm":4500.0,"city-mpg":37,"highway-mpg":42,"price":9495.0,"avg-mpg":39.5},{"symboling":2,"normalized-losses":94.0,"make":"volkswagen","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":97.3,"length":171.7,"width":65.5,"height":55.7,"curb-weight":2300,"engine-type":"ohc","num-of-cylinders":"four","engine-size":109,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":10.0,"horsepower":100.0,"peak-rpm":5500.0,"city-mpg":26,"highway-mpg":32,"price":9995.0,"avg-mpg":29.0},{"symboling":3,"normalized-losses":null,"make":"volkswagen","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"convertible","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":159.3,"width":64.2,"height":55.6,"curb-weight":2254,"engine-type":"ohc","num-of-cylinders":"four","engine-size":109,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":8.5,"horsepower":90.0,"peak-rpm":5500.0,"city-mpg":24,"highway-mpg":29,"price":11595.0,"avg-mpg":26.5},{"symboling":3,"normalized-losses":256.0,"make":"volkswagen","fuel-type":"gas","aspiration":"std","num-of-doors":"two","body-style":"hatchback","drive-wheels":"fwd","engine-location":"front","wheel-base":94.5,"length":165.7,"width":64.0,"height":51.4,"curb-weight":2221,"engine-type":"ohc","num-of-cylinders":"four","engine-size":109,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":8.5,"horsepower":90.0,"peak-rpm":5500.0,"city-mpg":24,"highway-mpg":29,"price":9980.0,"avg-mpg":26.5},{"symboling":0,"normalized-losses":null,"make":"volkswagen","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":100.4,"length":180.2,"width":66.9,"height":55.1,"curb-weight":2661,"engine-type":"ohc","num-of-cylinders":"five","engine-size":136,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":8.5,"horsepower":110.0,"peak-rpm":5500.0,"city-mpg":19,"highway-mpg":24,"price":13295.0,"avg-mpg":21.5},{"symboling":0,"normalized-losses":null,"make":"volkswagen","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"fwd","engine-location":"front","wheel-base":100.4,"length":180.2,"width":66.9,"height":55.1,"curb-weight":2579,"engine-type":"ohc","num-of-cylinders":"four","engine-size":97,"fuel-system":"idi","bore":3.01,"stroke":3.4,"compression-ratio":23.0,"horsepower":68.0,"peak-rpm":4500.0,"city-mpg":33,"highway-mpg":38,"price":13845.0,"avg-mpg":35.5},{"symboling":0,"normalized-losses":null,"make":"volkswagen","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"fwd","engine-location":"front","wheel-base":100.4,"length":183.1,"width":66.9,"height":55.1,"curb-weight":2563,"engine-type":"ohc","num-of-cylinders":"four","engine-size":109,"fuel-system":"mpfi","bore":3.19,"stroke":3.4,"compression-ratio":9.0,"horsepower":88.0,"peak-rpm":5500.0,"city-mpg":25,"highway-mpg":31,"price":12290.0,"avg-mpg":28.0},{"symboling":-2,"normalized-losses":103.0,"make":"volvo","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":104.3,"length":188.8,"width":67.2,"height":56.2,"curb-weight":2912,"engine-type":"ohc","num-of-cylinders":"four","engine-size":141,"fuel-system":"mpfi","bore":3.78,"stroke":3.15,"compression-ratio":9.5,"horsepower":114.0,"peak-rpm":5400.0,"city-mpg":23,"highway-mpg":28,"price":12940.0,"avg-mpg":25.5},{"symboling":-1,"normalized-losses":74.0,"make":"volvo","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":104.3,"length":188.8,"width":67.2,"height":57.5,"curb-weight":3034,"engine-type":"ohc","num-of-cylinders":"four","engine-size":141,"fuel-system":"mpfi","bore":3.78,"stroke":3.15,"compression-ratio":9.5,"horsepower":114.0,"peak-rpm":5400.0,"city-mpg":23,"highway-mpg":28,"price":13415.0,"avg-mpg":25.5},{"symboling":-2,"normalized-losses":103.0,"make":"volvo","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":104.3,"length":188.8,"width":67.2,"height":56.2,"curb-weight":2935,"engine-type":"ohc","num-of-cylinders":"four","engine-size":141,"fuel-system":"mpfi","bore":3.78,"stroke":3.15,"compression-ratio":9.5,"horsepower":114.0,"peak-rpm":5400.0,"city-mpg":24,"highway-mpg":28,"price":15985.0,"avg-mpg":26.0},{"symboling":-1,"normalized-losses":74.0,"make":"volvo","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":104.3,"length":188.8,"width":67.2,"height":57.5,"curb-weight":3042,"engine-type":"ohc","num-of-cylinders":"four","engine-size":141,"fuel-system":"mpfi","bore":3.78,"stroke":3.15,"compression-ratio":9.5,"horsepower":114.0,"peak-rpm":5400.0,"city-mpg":24,"highway-mpg":28,"price":16515.0,"avg-mpg":26.0},{"symboling":-2,"normalized-losses":103.0,"make":"volvo","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":104.3,"length":188.8,"width":67.2,"height":56.2,"curb-weight":3045,"engine-type":"ohc","num-of-cylinders":"four","engine-size":130,"fuel-system":"mpfi","bore":3.62,"stroke":3.15,"compression-ratio":7.5,"horsepower":162.0,"peak-rpm":5100.0,"city-mpg":17,"highway-mpg":22,"price":18420.0,"avg-mpg":19.5},{"symboling":-1,"normalized-losses":74.0,"make":"volvo","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"wagon","drive-wheels":"rwd","engine-location":"front","wheel-base":104.3,"length":188.8,"width":67.2,"height":57.5,"curb-weight":3157,"engine-type":"ohc","num-of-cylinders":"four","engine-size":130,"fuel-system":"mpfi","bore":3.62,"stroke":3.15,"compression-ratio":7.5,"horsepower":162.0,"peak-rpm":5100.0,"city-mpg":17,"highway-mpg":22,"price":18950.0,"avg-mpg":19.5},{"symboling":-1,"normalized-losses":95.0,"make":"volvo","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":109.1,"length":188.8,"width":68.9,"height":55.5,"curb-weight":2952,"engine-type":"ohc","num-of-cylinders":"four","engine-size":141,"fuel-system":"mpfi","bore":3.78,"stroke":3.15,"compression-ratio":9.5,"horsepower":114.0,"peak-rpm":5400.0,"city-mpg":23,"highway-mpg":28,"price":16845.0,"avg-mpg":25.5},{"symboling":-1,"normalized-losses":95.0,"make":"volvo","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":109.1,"length":188.8,"width":68.8,"height":55.5,"curb-weight":3049,"engine-type":"ohc","num-of-cylinders":"four","engine-size":141,"fuel-system":"mpfi","bore":3.78,"stroke":3.15,"compression-ratio":8.7,"horsepower":160.0,"peak-rpm":5300.0,"city-mpg":19,"highway-mpg":25,"price":19045.0,"avg-mpg":22.0},{"symboling":-1,"normalized-losses":95.0,"make":"volvo","fuel-type":"gas","aspiration":"std","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":109.1,"length":188.8,"width":68.9,"height":55.5,"curb-weight":3012,"engine-type":"ohcv","num-of-cylinders":"six","engine-size":173,"fuel-system":"mpfi","bore":3.58,"stroke":2.87,"compression-ratio":8.8,"horsepower":134.0,"peak-rpm":5500.0,"city-mpg":18,"highway-mpg":23,"price":21485.0,"avg-mpg":20.5},{"symboling":-1,"normalized-losses":95.0,"make":"volvo","fuel-type":"diesel","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":109.1,"length":188.8,"width":68.9,"height":55.5,"curb-weight":3217,"engine-type":"ohc","num-of-cylinders":"six","engine-size":145,"fuel-system":"idi","bore":3.01,"stroke":3.4,"compression-ratio":23.0,"horsepower":106.0,"peak-rpm":4800.0,"city-mpg":26,"highway-mpg":27,"price":22470.0,"avg-mpg":26.5},{"symboling":-1,"normalized-losses":95.0,"make":"volvo","fuel-type":"gas","aspiration":"turbo","num-of-doors":"four","body-style":"sedan","drive-wheels":"rwd","engine-location":"front","wheel-base":109.1,"length":188.8,"width":68.9,"height":55.5,"curb-weight":3062,"engine-type":"ohc","num-of-cylinders":"four","engine-size":141,"fuel-system":"mpfi","bore":3.78,"stroke":3.15,"compression-ratio":9.5,"horsepower":114.0,"peak-rpm":5400.0,"city-mpg":19,"highway-mpg":25,"price":22625.0,"avg-mpg":22.0}];
+
+// ── Palette ───────────────────────────────────────────────────────────────────
+const PAL     = ['#38bdf8','#818cf8','#f472b6','#34d399','#fb923c','#facc15','#a78bfa','#e879f9','#2dd4bf'];
+const BODY_C  = {convertible:'#f472b6',hardtop:'#fb923c',hatchback:'#38bdf8',sedan:'#818cf8',wagon:'#34d399'};
+const ENG_C   = {dohc:'#f472b6',l:'#a78bfa',ohc:'#38bdf8',ohcf:'#34d399',ohcv:'#fb923c',rotor:'#facc15'};
+
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = "'Share Tech Mono', monospace";
+
+// ── Math helpers ──────────────────────────────────────────────────────────────
+const num    = (d,k) => d.map(r=>r[k]).filter(v=>v!=null&&!isNaN(v));
+const mean   = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : 0;
+const median = a => { if(!a.length) return 0; const s=[...a].sort((a,b)=>a-b),m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+const fmt$   = v => v==null ? '—' : '$'+Math.round(v).toLocaleString();
+const fmtN   = (v,d=1) => v==null ? '—' : (+v).toFixed(d);
+
+function hist(vals, bins=20){
+  const mn=Math.min(...vals), mx=Math.max(...vals), bw=(mx-mn)/bins||1;
+  const counts=new Array(bins).fill(0);
+  vals.forEach(v=>{ const i=Math.min(Math.floor((v-mn)/bw),bins-1); counts[i]++; });
+  return { labels:counts.map((_,i)=>Math.round(mn+i*bw)), counts };
+}
+
+function pearson(xs,ys){
+  const n=xs.length; if(n<2) return 0;
+  const mx=mean(xs),my=mean(ys); let num=0,dx=0,dy=0;
+  for(let i=0;i<n;i++){num+=(xs[i]-mx)*(ys[i]-my);dx+=(xs[i]-mx)**2;dy+=(ys[i]-my)**2;}
+  return (dx&&dy)?num/Math.sqrt(dx*dy):0;
+}
+
+// ── Chart registry (destroy before recreate) ──────────────────────────────────
+const CHARTS={};
+function mkChart(id,cfg){
+  if(CHARTS[id]){ CHARTS[id].destroy(); }
+  const canvas=document.getElementById(id);
+  if(!canvas) return;
+  CHARTS[id]=new Chart(canvas,cfg);
+}
+
+// ── Shared axis defaults ──────────────────────────────────────────────────────
+const gridColor = '#1e293b';
+const xAxis = (opts={}) => ({ ticks:{font:{size:7},...(opts.ticks||{})}, grid:{color:gridColor}, ...opts });
+const yAxis = (opts={}) => ({ ticks:{font:{size:7},...(opts.ticks||{})}, grid:{color:gridColor}, ...opts });
+
+// ── Filter state ──────────────────────────────────────────────────────────────
+let fBody='all', fEng='all', fFuel='all';
+const filtered = () => RAW.filter(r=>
+  (fBody==='all'||r['body-style']===fBody)&&
+  (fEng ==='all'||r['engine-type']===fEng)&&
+  (fFuel==='all'||r['fuel-type']===fFuel)
+);
+
+// ── Build filter dropdowns ────────────────────────────────────────────────────
+function buildFilters(){
+  const bar=document.getElementById('statsFilters');
+  const sel=(label,opts,cb)=>{
+    const wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;align-items:center;gap:8px';
+    const lbl=document.createElement('span');
+    lbl.textContent=label;
+    lbl.style.cssText='font-family:Share Tech Mono,monospace;font-size:.62rem;color:#475569;letter-spacing:2px;text-transform:uppercase';
+    const s=document.createElement('select');
+    s.style.cssText='background:#111827;border:1.5px solid #1e293b;color:#e2e8f0;font-family:Share Tech Mono,monospace;font-size:.72rem;padding:5px 10px;border-radius:6px;cursor:pointer;outline:none';
+    ['all',...opts].forEach(o=>s.appendChild(new Option(o==='all'?'All '+label:o.toUpperCase(),o)));
+    s.addEventListener('change',()=>{cb(s.value);renderAll();});
+    wrap.append(lbl,s); bar.appendChild(wrap);
+  };
+  const uniq = k=>[...new Set(RAW.map(r=>r[k]).filter(Boolean))].sort();
+  sel('Body',   uniq('body-style'),   v=>fBody=v);
+  sel('Engine', uniq('engine-type'),  v=>fEng=v);
+  sel('Fuel',   uniq('fuel-type'),    v=>fFuel=v);
+}
+
+// ── KPI cards ─────────────────────────────────────────────────────────────────
+function renderKPI(d){
+  const prices=num(d,'price'),hps=num(d,'horsepower'),mpgs=num(d,'avg-mpg'),sizes=num(d,'engine-size');
+  const makes=[...new Set(d.map(r=>r.make).filter(Boolean))].length;
+  const kpis=[
+    ['Total Cars',    d.length,                 ''],
+    ['Avg Price',     fmt$(mean(prices)),        ''],
+    ['Avg HP',        fmtN(mean(hps),0)+' hp',  ''],
+    ['Avg MPG',       fmtN(mean(mpgs),1)+' mpg',''],
+    ['Median Price',  fmt$(median(prices)),      ''],
+    ['Max HP',        fmtN(Math.max(...hps.length?hps:[0]),0)+' hp',''],
+    ['Avg Eng.Sz',    fmtN(mean(sizes),0)+' cc',''],
+    ['Unique Makes',  makes,                     ''],
+  ];
+  const row=document.getElementById('kpiRow');
+  row.innerHTML='';
+  kpis.forEach(([label,val])=>row.insertAdjacentHTML('beforeend',`
+    <div style="flex:1;min-width:110px;background:#0a0e1a;border:1px solid #1e293b;border-radius:10px;padding:10px 14px;text-align:center">
+      <div style="font-family:Share Tech Mono,monospace;font-size:1.1rem;font-weight:700;color:#38bdf8">${val}</div>
+      <div style="font-size:.6rem;color:#475569;text-transform:uppercase;letter-spacing:.7px;margin-top:2px">${label}</div>
+    </div>`));
+  const countEl=document.getElementById('statsCount');
+  if(countEl) countEl.textContent=`Showing ${d.length} of ${RAW.length} records`;
+}
+
+// ── Histogram ─────────────────────────────────────────────────────────────────
+function renderHist(id, vals, color){
+  if(!vals.length){ mkChart(id,{type:'bar',data:{labels:[],datasets:[]},options:{}}); return; }
+  const {labels,counts}=hist(vals,22);
+  const avg=mean(vals), mn=Math.min(...vals), bw=(Math.max(...vals)-mn)/22||1;
+  const toIdx=v=>Math.min(Math.floor((v-mn)/bw),21);
+  mkChart(id,{
+    type:'bar',
+    data:{ labels, datasets:[{ data:counts, backgroundColor:color+'bb', borderColor:color, borderWidth:0.5, borderRadius:2 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{title:i=>'≥ '+i[0].label,label:i=>i.formattedValue+' cars'}} },
+      scales:{ x:xAxis({ticks:{maxTicksLimit:5}}), y:yAxis({ticks:{maxTicksLimit:4}}) },
+      animation:{duration:300}
+    },
+    plugins:[{
+      id:'meanLines',
+      afterDraw(chart){
+        const ctx=chart.ctx,xS=chart.scales.x,yS=chart.scales.y;
+        [[avg,'#ffffff'],[median(vals),'#facc15']].forEach(([v,c])=>{
+          const px=xS.getPixelForValue(toIdx(v));
+          ctx.save();ctx.strokeStyle=c;ctx.lineWidth=1.4;ctx.setLineDash([4,3]);
+          ctx.beginPath();ctx.moveTo(px,yS.top);ctx.lineTo(px,yS.bottom);ctx.stroke();ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+function renderAll(){
+  const d=filtered();
+  renderKPI(d);
+
+  renderHist('cHist0',num(d,'price'),      '#38bdf8');
+  renderHist('cHist1',num(d,'horsepower'), '#f472b6');
+  renderHist('cHist2',num(d,'avg-mpg'),    '#34d399');
+  renderHist('cHist3',num(d,'engine-size'),'#fb923c');
+
+  // ── Avg price by body style ──────────────────────────────────────────────
+  const bodyKeys=Object.keys(BODY_C);
+  mkChart('cBodyPrice',{
+    type:'bar',
+    data:{
+      labels:bodyKeys.map(b=>b.charAt(0).toUpperCase()+b.slice(1)),
+      datasets:[{
+        label:'Avg Price ($)',
+        data:bodyKeys.map(b=>{ const p=num(RAW.filter(r=>r['body-style']===b),'price'); return p.length?mean(p):null; }),
+        backgroundColor:bodyKeys.map(b=>BODY_C[b]+'99'),
+        borderColor:bodyKeys.map(b=>BODY_C[b]),
+        borderWidth:1.5,borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>'$'+Math.round(i.raw).toLocaleString()}}},
+      scales:{x:xAxis(),y:yAxis({ticks:{callback:v=>'$'+v.toLocaleString(),maxTicksLimit:5}})},
+      animation:{duration:300}
+    }
+  });
+
+  // ── HP & MPG by engine type ──────────────────────────────────────────────
+  const engKeys=[...new Set(RAW.map(r=>r['engine-type']).filter(Boolean))].sort();
+  mkChart('cEngHpMpg',{
+    type:'bar',
+    data:{
+      labels:engKeys.map(k=>k.toUpperCase()),
+      datasets:[
+        {label:'Avg HP',data:engKeys.map(e=>{const v=num(d.filter(r=>r['engine-type']===e),'horsepower');return v.length?mean(v):null;}),backgroundColor:'#f472b699',borderColor:'#f472b6',borderWidth:1.5,borderRadius:3},
+        {label:'Avg MPG ×4',data:engKeys.map(e=>{const v=num(d.filter(r=>r['engine-type']===e),'avg-mpg');return v.length?mean(v)*4:null;}),backgroundColor:'#34d39999',borderColor:'#34d399',borderWidth:1.5,borderRadius:3}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:8},boxWidth:12}}},
+      scales:{x:xAxis(),y:yAxis({ticks:{maxTicksLimit:5}})},
+      animation:{duration:300}
+    }
+  });
+
+  // ── Scatter: price vs hp ──────────────────────────────────────────────────
+  const scatterDS=bodyKeys.map(b=>{
+    const pts=d.filter(r=>r['body-style']===b&&r.price&&r.horsepower).map(r=>{return{x:r.horsepower,y:r.price};});
+    return{label:b,data:pts,backgroundColor:BODY_C[b]+'bb',pointRadius:3.5,pointHoverRadius:5};
+  });
+  const spx=d.filter(r=>r.price&&r.horsepower).map(r=>r.horsepower);
+  const spy=d.filter(r=>r.price&&r.horsepower).map(r=>r.price);
+  const datasets=[...scatterDS];
+  if(spx.length>2){
+    const mx=mean(spx),my=mean(spy); let n2=0,dn=0;
+    spx.forEach((x,i)=>{n2+=(x-mx)*(spy[i]-my);dn+=(x-mx)**2;});
+    const m=dn?n2/dn:0,b2=my-m*mx,xmn=Math.min(...spx),xmx=Math.max(...spx);
+    datasets.unshift({label:'Trend',data:[{x:xmn,y:m*xmn+b2},{x:xmx,y:m*xmx+b2}],type:'line',
+      borderColor:'#ffffff55',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,order:0});
+  }
+  mkChart('cScatter',{
+    type:'scatter',data:{datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:7},boxWidth:10,padding:6}},tooltip:{callbacks:{label:i=>`HP:${i.raw.x}  ${fmt$(i.raw.y)}`}}},
+      scales:{
+        x:xAxis({title:{display:true,text:'Horsepower',font:{size:7}}}),
+        y:yAxis({title:{display:true,text:'Price ($)',font:{size:7}},ticks:{callback:v=>'$'+v.toLocaleString(),maxTicksLimit:5}})
+      },
+      animation:{duration:300}
+    }
+  });
+
+  // ── Correlation bar ───────────────────────────────────────────────────────
+  const corrFeatures=[['Horsepower','horsepower'],['Engine Size','engine-size'],['Curb Weight','curb-weight'],
+    ['Width','width'],['Length','length'],['Wheel Base','wheel-base'],
+    ['Avg MPG','avg-mpg'],['Peak RPM','peak-rpm'],['Compression','compression-ratio']];
+  const corrVals=corrFeatures.map(([,key])=>{
+    const pairs=d.filter(r=>r[key]!=null&&r.price!=null&&!isNaN(r[key])&&!isNaN(r.price));
+    return pairs.length>4?pearson(pairs.map(r=>r[key]),pairs.map(r=>r.price)):0;
+  });
+  const corrSorted=[...corrFeatures.map(([l],i)=>{return{l,v:corrVals[i]};})]
+    .sort((a,b)=>b.v-a.v);
+  mkChart('cCorr',{
+    type:'bar',
+    data:{
+      labels:corrSorted.map(x=>x.l),
+      datasets:[{
+        label:'r with Price',
+        data:corrSorted.map(x=>x.v),
+        backgroundColor:corrSorted.map(x=>x.v>=0?'#38bdf888':'#f472b888'),
+        borderColor:corrSorted.map(x=>x.v>=0?'#38bdf8':'#f472b6'),
+        borderWidth:1.5,borderRadius:3
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:xAxis({min:-1,max:1,ticks:{maxTicksLimit:6}}),
+        y:yAxis({ticks:{font:{size:7.5}}})
+      },
+      animation:{duration:300}
+    }
+  });
+
+  // ── Makes horizontal bar ─────────────────────────────────────────────────
+  const makeCounts={};
+  d.forEach(r=>{ if(r.make) makeCounts[r.make]=(makeCounts[r.make]||0)+1; });
+  const sortedMakes=Object.entries(makeCounts).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  mkChart('cMakes',{
+    type:'bar',
+    data:{
+      labels:sortedMakes.map(([m])=>m),
+      datasets:[{data:sortedMakes.map(([,c])=>c),backgroundColor:'#38bdf888',borderColor:'#38bdf8',borderWidth:1.2,borderRadius:3}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:xAxis({ticks:{maxTicksLimit:6}}),y:yAxis({ticks:{font:{size:7.5}}})},
+      animation:{duration:300}
+    }
+  });
+
+  // ── Drive-wheel doughnut ─────────────────────────────────────────────────
+  const dwCounts={};
+  d.forEach(r=>{ if(r['drive-wheels']) dwCounts[r['drive-wheels']]=(dwCounts[r['drive-wheels']]||0)+1; });
+  const dwKeys=Object.keys(dwCounts);
+  mkChart('cDW',{
+    type:'doughnut',
+    data:{
+      labels:dwKeys.map(k=>k.toUpperCase()),
+      datasets:[{data:dwKeys.map(k=>dwCounts[k]),backgroundColor:PAL.slice(0,dwKeys.length).map(c=>c+'cc'),borderColor:PAL.slice(0,dwKeys.length),borderWidth:2,hoverOffset:5}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom',labels:{font:{size:9},padding:10,boxWidth:11}},
+        tooltip:{callbacks:{label:i=>i.label+': '+i.raw+' ('+Math.round(i.raw/d.length*100)+'%)'}}
+      },
+      animation:{duration:300}
+    }
+  });
+}
+
+buildFilters();
+renderAll();
+})();
+</script>
+<!-- ##STATS_SECTION_END## -->
+
+</body>
+</html>
