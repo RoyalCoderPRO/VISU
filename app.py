@@ -32,11 +32,13 @@ st.markdown("""
         max-width: 100% !important;
     }
     iframe { border: none !important; }
-    hr { margin: 0.4rem 0 !important; }
+    hr { margin: 0.25rem 0 !important; }
     .stMarkdown { margin-bottom: 0 !important; }
-    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-        gap: 0.25rem !important;
-    }
+    /* collapse whitespace around pyplot figures */
+    [data-testid="stImage"] { margin: 0 !important; padding: 0 !important; }
+    [data-testid="stImage"] img { display: block !important; }
+    /* tighten gap between stacked Streamlit elements */
+    [data-testid="stVerticalBlock"] { gap: 0.3rem !important; }
 </style>
 """, unsafe_allow_html=True)
 

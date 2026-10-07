@@ -64,7 +64,7 @@ def fig_distributions(dff: pd.DataFrame) -> plt.Figure:
         ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True, nbins=4))
         ax.tick_params(labelsize=6.5)
         ax.grid(axis="y", alpha=0.3)
-    fig.tight_layout(pad=1.1)
+    fig.tight_layout(pad=0.4)
     return fig
 
 
@@ -208,3 +208,4 @@ def fig_drive_wheel(dff: pd.DataFrame) -> plt.Figure:
         t.set_fontsize(9)
     fig.tight_layout()
     return fig
+
