@@ -32,6 +32,11 @@ st.markdown("""
         max-width: 100% !important;
     }
     iframe { border: none !important; }
+    hr { margin: 0.4rem 0 !important; }
+    .stMarkdown { margin-bottom: 0 !important; }
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+        gap: 0.25rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -40,8 +45,7 @@ st.markdown("### 🏎️ Automobile Engine & Body Explorer")
 _html = (Path(__file__).parent / "frontend" / "explorer.html").read_text(encoding="utf-8")
 st.components.v1.html(_html, height=3000, scrolling=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-st.divider()
+st.markdown("---")
 
 # ── Section 2: Descriptive Statistics ────────────────────────────────────────
 NUMERIC = {
