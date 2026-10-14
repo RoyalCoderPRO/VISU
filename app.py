@@ -30,4 +30,19 @@ st.markdown("""
 
 # ── HTML Explorer ─────────────────────────────────────────────────────────────
 _html = (Path(__file__).parent / "frontend" / "explorer.html").read_text(encoding="utf-8")
-st.components.v1.html(_html, height=4000, scrolling=True)
+
+# Inject auto-resize so iframe shrinks to fit content — no empty space below
+_resize_script = """
+<script>
+  function _sendHeight() {
+    const h = document.documentElement.scrollHeight || document.body.scrollHeight;
+    window.parent.postMessage(
+      { isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: h }, "*"
+    );
+  }
+  window.addEventListener("load", _sendHeight);
+  window.addEventListener("load", () => setTimeout(_sendHeight, 800));
+</script>
+"""
+_html = _html.replace("</body>", _resize_script + "</body>")
+st.components.v1.html(_html, height=6000, scrolling=False)
