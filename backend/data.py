@@ -50,3 +50,4 @@ def fmt_value(v) -> str:
     if pd.isna(v):
         return "—"
     return f"{v:,.0f}" if abs(v) >= 1_000 else f"{v:.2f}"
+
