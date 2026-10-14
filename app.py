@@ -34,14 +34,19 @@ _html = (Path(__file__).parent / "frontend" / "explorer.html").read_text(encodin
 # Inject auto-resize so iframe shrinks to fit content — no empty space below
 _resize_script = """
 <script>
+  // Remove min-height:100vh so scrollHeight = actual content height
+  document.addEventListener("DOMContentLoaded", function() {
+    document.body.style.minHeight = "0";
+  });
   function _sendHeight() {
+    document.body.style.minHeight = "0";
     const h = document.documentElement.scrollHeight || document.body.scrollHeight;
     window.parent.postMessage(
       { isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: h }, "*"
     );
   }
   window.addEventListener("load", _sendHeight);
-  window.addEventListener("load", () => setTimeout(_sendHeight, 800));
+  [500, 1000, 2000].forEach(t => setTimeout(_sendHeight, t));
 </script>
 """
 _html = _html.replace("</body>", _resize_script + "</body>")
