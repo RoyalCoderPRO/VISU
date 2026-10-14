@@ -6,7 +6,7 @@ An interactive data dashboard built with **Streamlit** exploring the 1985 Ward's
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://royalcoderpro-visu.streamlit.app)
 
-**→ [https://royalcoderpro-visu.streamlit.app](https://royalcoderpro-visu.streamlit.app)**
+**→ [https://royalcoderpro-visu.streamlit.app](https://royalcoderpro-visu.streamlit.app](https://fastcarsandhighrisks.streamlit.app/))**
 
 ---
 
